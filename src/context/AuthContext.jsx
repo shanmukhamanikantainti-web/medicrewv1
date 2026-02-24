@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
 
                 if (error.code === 'PGRST116' || error.message.includes('JSON object')) {
                     addLog('🛠️ Attempting to create profile record...')
-                    const role = authUser.email === SUPERADMIN_EMAIL ? 'superadmin' : 'patient'
+                    const role = authUser.email === SUPERADMIN_EMAIL ? 'superadmin' : (authUser.user_metadata?.role || 'patient')
 
                     const profileData = {
                         id: authUser.id,
