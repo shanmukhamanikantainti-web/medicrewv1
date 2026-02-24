@@ -34,6 +34,7 @@ export default function Auth() {
             options: {
                 data: { role },
                 shouldCreateUser: true,
+                emailRedirectTo: window.location.origin,
             }
         })
         setLoading(false)
