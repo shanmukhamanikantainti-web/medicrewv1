@@ -95,8 +95,16 @@ export function AuthProvider({ children }) {
                     if (insertError) {
                         addLog(`❌ DATABASE INSERT FAILED: ${insertError.message}`, 'error')
                         if (insertError.details) addLog(`Details: ${insertError.details}`, 'error')
-                        // Alert provides immediate visibility for the user
-                        alert(`Database Error: ${insertError.message}. Check the DEBUG logs in the app.`)
+
+                        // Check for Foreign Key Violation (Error code 23503 in PostgreSQL)
+                        // This happens if the user was deleted from Supabase Auth but the session persists
+                        if (insertError.code === '23503') {
+                            addLog('⚠️ User record missing in Auth. Signing out...', 'warn')
+                            await signOut()
+                        } else {
+                            // Alert provides immediate visibility for other database errors
+                            alert(`Database Error: ${insertError.message}. Check the DEBUG logs in the app.`)
+                        }
                     } else {
                         addLog('✅ Profile created successfully!')
                         setProfile(newProfile)
