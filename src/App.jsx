@@ -109,8 +109,16 @@ export default function App() {
         <>
             <AdminGate />
             <Routes>
-                <Route path="/" element={user ? <Navigate to={getDashboardRoute(profile?.role)} /> : <Landing />} />
-                <Route path="/auth" element={user ? <Navigate to={getDashboardRoute(profile?.role)} /> : <Auth />} />
+                <Route path="/" element={
+                    !user ? <Landing /> :
+                        profile ? <Navigate to={getDashboardRoute(profile.role)} replace /> :
+                            <div className="loading-screen"><div className="spinner" /></div>
+                } />
+                <Route path="/auth" element={
+                    !user ? <Auth /> :
+                        profile ? <Navigate to={getDashboardRoute(profile.role)} replace /> :
+                            <div className="loading-screen"><div className="spinner" /></div>
+                } />
 
                 <Route path="/patient/*" element={
                     <ProtectedRoute allowedRoles={['patient']}>
@@ -145,6 +153,7 @@ export default function App() {
 }
 
 function getDashboardRoute(role) {
+    if (!role) return null
     if (role === 'doctor') return '/doctor'
     if (role === 'admin' || role === 'superadmin') return '/admin'
     return '/patient'
