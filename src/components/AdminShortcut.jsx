@@ -13,6 +13,7 @@ export function AdminShortcut() {
 
             // Only trigger if user is an admin
             if (isAdmin) {
+                // Superadmin or verified admin goes straight to dashboard
                 if (isAdminVerified) {
                     navigate('/admin')
                 } else {

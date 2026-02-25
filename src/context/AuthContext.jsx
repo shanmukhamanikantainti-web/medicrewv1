@@ -14,6 +14,14 @@ export function AuthProvider({ children }) {
         return sessionStorage.getItem('admin_verified') === 'true'
     })
 
+    // Auto-verify if superadmin email matches
+    useEffect(() => {
+        if (user?.email === SUPERADMIN_EMAIL && !isAdminVerified) {
+            setIsAdminVerified(true)
+            sessionStorage.setItem('admin_verified', 'true')
+        }
+    }, [user, isAdminVerified])
+
     const addLog = (msg, type = 'info') => {
         console.log(`[DEBUG] ${msg}`)
         setDebugLog(prev => [...prev.slice(-10), { msg, type, time: new Date().toLocaleTimeString() }])
