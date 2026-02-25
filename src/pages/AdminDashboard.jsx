@@ -80,15 +80,15 @@ function UsersTab({ adminId }) {
         fetchUsers()
     }, [])
 
-    async function resetUserRole(id, email) {
-        if (!confirm(`Reset role for ${email} to patient?`)) return
-        const { error } = await supabase.from('profiles').update({ role: 'patient', verified: false, temp_admin_expires_at: null, previous_role: null }).eq('id', id)
+    async function deleteUser(id, email) {
+        if (!confirm(`PERMANENTLY DELETE user ${email}? This action cannot be undone.`)) return
+        const { error } = await supabase.from('profiles').delete().eq('id', id)
         if (error) {
-            alert("Error resetting role: " + error.message)
+            alert("Error deleting user: " + error.message)
             return
         }
-        await logAudit(supabase, adminId, `Reset role for ${email}`, id)
-        setUsers(u => u.map(x => x.id === id ? { ...x, role: 'patient', verified: false } : x))
+        await logAudit(supabase, adminId, `Deleted user ${email}`, id)
+        setUsers(u => u.filter(x => x.id !== id))
     }
 
     const roleColor = { patient: 'badge-blue', doctor: 'badge-green', admin: 'badge-orange', superadmin: 'badge-red' }
@@ -116,8 +116,8 @@ function UsersTab({ adminId }) {
                                     <td>{u.verified ? <CheckCircle size={16} color="#16a34a" /> : <Clock size={16} color="#ca8a04" />}</td>
                                     <td>
                                         {u.role !== 'superadmin' && (
-                                            <button className="btn btn-sm btn-ghost" style={{ color: '#dc2626' }} onClick={() => resetUserRole(u.id, u.email)}>
-                                                <RefreshCw size={13} /> Reset Role
+                                            <button className="btn btn-sm btn-ghost" style={{ color: '#dc2626' }} onClick={() => deleteUser(u.id, u.email)}>
+                                                <Trash2 size={13} /> Delete User
                                             </button>
                                         )}
                                     </td>
