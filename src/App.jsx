@@ -9,6 +9,7 @@ import Appointments from './pages/Appointments'
 import DoctorDashboard from './pages/DoctorDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminVerify from './pages/AdminVerify'
+import { AdminShortcut } from './components/AdminShortcut'
 
 function ProtectedRoute({ children, allowedRoles }) {
     const { user, profile, loading, isAdminVerified } = useAuth()
@@ -86,7 +87,8 @@ function ProtectedRoute({ children, allowedRoles }) {
 
     // Role-specific secondary checks
     if (allowedRoles && (allowedRoles.includes('admin') || allowedRoles.includes('superadmin'))) {
-        if (!isAdminVerified) {
+        // Prevent circular redirect for the verification page itself
+        if (!isAdminVerified && window.location.pathname !== '/admin/verify') {
             return <Navigate to="/admin/verify" replace />
         }
     }
@@ -114,6 +116,7 @@ export default function App() {
 
     return (
         <>
+            <AdminShortcut />
             <Routes>
                 <Route path="/" element={
                     !user ? <Landing /> :
