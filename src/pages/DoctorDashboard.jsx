@@ -77,13 +77,13 @@ export default function DoctorDashboard() {
                     {/* Stats */}
                     <div className="stats-grid mb-6">
                         {[
-                            { icon: Users, label: 'My Patients', value: patients.length, bg: '#eff6ff', color: '#2563eb' },
-                            { icon: Calendar, label: 'Upcoming Appointments', value: appointments.filter(a => a.status !== 'cancelled').length, bg: '#ecfdf5', color: '#059669' },
-                            { icon: AlertCircle, label: 'Pending Requests', value: pendingAppts, bg: '#fff7ed', color: '#ea580c' },
-                            { icon: Activity, label: 'Abnormal Vitals', value: alertPatients.length, bg: '#fef2f2', color: '#dc2626' },
+                            { icon: Users, label: 'My Patients', value: patients.length, color: '#2563eb' },
+                            { icon: Calendar, label: 'Upcoming Appointments', value: appointments.filter(a => a.status !== 'cancelled').length, color: '#059669' },
+                            { icon: AlertCircle, label: 'Pending Requests', value: pendingAppts, color: '#ea580c' },
+                            { icon: Activity, label: 'Abnormal Vitals', value: alertPatients.length, color: '#dc2626' },
                         ].map(s => (
                             <div key={s.label} className="stat-card">
-                                <div className="stat-icon" style={{ background: s.bg }}>
+                                <div className="stat-icon" style={{ background: `${s.color}15` }}>
                                     <s.icon size={22} color={s.color} />
                                 </div>
                                 <div>
@@ -96,13 +96,13 @@ export default function DoctorDashboard() {
 
                     {/* Alerts */}
                     {alertPatients.length > 0 && (
-                        <div className="alert alert-error mb-6" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div className="alert alert-error mb-6" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: '0.5rem', backdropFilter: 'blur(10px)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
                                 <AlertCircle size={16} /> Abnormal Vitals Detected
                             </div>
                             {alertPatients.map(p => (
                                 <div key={p.id} style={{ fontSize: '0.875rem' }}>
-                                    {p.full_name || p.email} ΓÇö HR: {patientVitals[p.id]?.hr}bpm | SpOΓéé: {patientVitals[p.id]?.spo2}% | Temp: {patientVitals[p.id]?.temp}┬░C
+                                    {p.full_name || p.email} — HR: {patientVitals[p.id]?.hr}bpm | SpO₂: {patientVitals[p.id]?.spo2}% | Temp: {patientVitals[p.id]?.temp}°C
                                 </div>
                             ))}
                         </div>
@@ -131,7 +131,7 @@ export default function DoctorDashboard() {
                                                             <div style={{ fontWeight: 700, color: 'var(--gray-800)' }}>{p.full_name || p.email}</div>
                                                             {v && (
                                                                 <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                                                                    HR: {v.hr}bpm ┬╖ SpOΓéé: {v.spo2}% ┬╖ Temp: {v.temp}┬░C
+                                                                    HR: {v.hr}bpm · SpO₂: {v.spo2}% · Temp: {v.temp}°C
                                                                 </div>
                                                             )}
                                                         </div>
@@ -151,7 +151,7 @@ export default function DoctorDashboard() {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                 <h2 className="section-title" style={{ margin: 0 }}>Upcoming Appointments</h2>
-                                <Link to="/doctor/appointments" style={{ fontSize: '0.875rem', color: 'var(--blue-600)' }}>Manage all ΓåÆ</Link>
+                                <Link to="/doctor/appointments" style={{ fontSize: '0.875rem', color: 'var(--blue-600)' }}>Manage all →</Link>
                             </div>
                             {appointments.length === 0 ? (
                                 <div className="card empty-state">

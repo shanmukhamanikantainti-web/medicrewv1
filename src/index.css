@@ -67,23 +67,29 @@ html {
 
 @keyframes mesh-gradient {
   0% {
-    background-position: 0% 50%;
+    background: radial-gradient(at 0% 0%, #dbeafe 0, transparent 50%), radial-gradient(at 50% 0%, #fef3c7 0, transparent 50%), radial-gradient(at 100% 0%, #dcfce7 0, transparent 50%);
   }
 
   50% {
-    background-position: 100% 50%;
+    background: radial-gradient(at 0% 50%, #f3e8ff 0, transparent 50%), radial-gradient(at 50% 50%, #eff6ff 0, transparent 50%), radial-gradient(at 100% 50%, #fee2e2 0, transparent 50%);
   }
 
   100% {
-    background-position: 0% 50%;
+    background: radial-gradient(at 0% 0%, #dbeafe 0, transparent 50%), radial-gradient(at 50% 0%, #fef3c7 0, transparent 50%), radial-gradient(at 100% 0%, #dcfce7 0, transparent 50%);
   }
 }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(-45deg, #f0f7ff, #ffffff, #eef2ff, #f9fafb);
-  background-size: 400% 400%;
-  animation: mesh-gradient 15s ease infinite;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 0% 0%, hsla(210, 100%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(225, 100%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(334, 100%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(263, 100%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 50%, hsla(11, 100%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 50%, hsla(153, 100%, 96%, 1) 0, transparent 50%);
+  background-attachment: fixed;
   color: var(--gray-800);
   line-height: 1.6;
   min-height: 100vh;
@@ -338,7 +344,7 @@ body {
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: var(--gray-50);
+  background: transparent;
 }
 
 .sidebar {
@@ -468,9 +474,9 @@ body {
 .page-header {
   padding: 2rem 2rem 1.5rem;
   border-bottom: var(--glass-border);
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   position: sticky;
   top: 0;
   z-index: 50;
