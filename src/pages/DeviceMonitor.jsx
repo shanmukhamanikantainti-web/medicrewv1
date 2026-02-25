@@ -2,17 +2,26 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Cpu, Link2, WifiOff, Activity, RefreshCw, AlertCircle } from 'lucide-react'
+import { Cpu, Link2, WifiOff, Activity, RefreshCw, AlertCircle, Shield } from 'lucide-react'
 
-// No longer using generateVitals simulation
-async function fetchDeviceData(ip) {
+// Fallback simulation for when HTTPS blocks local fetch
+function generateMockVitals() {
+    return {
+        hr: Math.floor(Math.random() * 20 + 70),
+        temp: (Math.random() * 1.5 + 36.5).toFixed(1),
+        spo2: Math.floor(Math.random() * 3 + 97),
+        updatedAt: new Date().toLocaleTimeString()
+    }
+}
+
+async function fetchDeviceData(target) {
     try {
-        const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-        const res = await fetch(`http://${ip}`, { mode: 'cors' })
+        // If target doesn't start with http, assume it's an IP and use http
+        const url = target.startsWith('http') ? target : `http://${target}`
+        const res = await fetch(url, { mode: 'cors' })
         if (!res.ok) throw new Error('Device unreachable')
         const data = await res.json()
 
-        // Handling specific keys from user's JSON response
         return {
             hr: data.heart_rate_bpm || data.hr || 0,
             temp: data.temperature_c || data.temp || 0,
@@ -33,6 +42,7 @@ export default function DeviceMonitor() {
     const [linking, setLinking] = useState(false)
     const [error, setError] = useState('')
     const [pulse, setPulse] = useState(false)
+    const [isSimulating, setIsSimulating] = useState(false)
 
     useEffect(() => {
         if (!user) return
@@ -42,17 +52,21 @@ export default function DeviceMonitor() {
             })
     }, [user])
 
-    // Polling for real device data
+    // Polling logic
     useEffect(() => {
         if (!device) return
 
         const fetchData = async () => {
             if (document.visibilityState !== 'visible') return
 
-            // Try to resolve IP if not already known, or use the provided example IP
-            // In a real scenario, we might use mdns (device_id.local) or a stored IP
-            const targetIp = device.ip_address || "10.54.100.170"
+            if (isSimulating) {
+                setVitals(generateMockVitals())
+                setPulse(true)
+                setTimeout(() => setPulse(false), 500)
+                return
+            }
 
+            const targetIp = device.ip_address || "10.54.100.170"
             const data = await fetchDeviceData(targetIp)
             if (data) {
                 setVitals(data)
@@ -60,7 +74,7 @@ export default function DeviceMonitor() {
                 setTimeout(() => setPulse(false), 500)
                 setError('')
             } else {
-                setError(`Unable to reach device at ${targetIp}. Ensure it's on the same network & CORS is enabled.`)
+                setError(`Unable to reach device. This is likely due to Mixed Content security (HTTPS vs HTTP).`)
             }
         }
 
@@ -150,9 +164,27 @@ export default function DeviceMonitor() {
                                         <span style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>Try any ID like MC-0001 to simulate a device</span>
                                     </div>
                                     {window.location.protocol === 'https:' && (
-                                        <div className="alert alert-error mb-4" style={{ fontSize: '0.8125rem', padding: '0.75rem' }}>
-                                            <AlertCircle size={14} style={{ flexShrink: 0 }} />
-                                            Browsers block connection to local IPs via HTTPS. Please run locally at <strong>http://localhost:5173</strong>.
+                                        <div className="alert alert-info mb-4" style={{ fontSize: '0.8125rem', padding: '1rem', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Shield size={14} /> Security Notice
+                                            </div>
+                                            <p>Browsers block local IP access from HTTPS (Vercel). Options:</p>
+                                            <ul style={{ paddingLeft: '1.25rem', margin: '0.25rem 0' }}>
+                                                <li>Run locally: <strong>http://localhost:5173</strong></li>
+                                                <li>Use a tunnel: Enter an <strong>https://</strong> ngrok URL</li>
+                                                <li>Test UI: Click "Simulate Device" below</li>
+                                            </ul>
+                                            <button
+                                                type="button"
+                                                className="btn btn-ghost btn-sm"
+                                                style={{ marginTop: '0.5rem', width: '100%' }}
+                                                onClick={() => {
+                                                    setDevice({ device_id: 'SIMULATOR', status: 'active' })
+                                                    setIsSimulating(true)
+                                                }}
+                                            >
+                                                Start Device Simulator
+                                            </button>
                                         </div>
                                     )}
                                     <button type="submit" className="btn btn-primary" disabled={linking} id="link-device-btn">
