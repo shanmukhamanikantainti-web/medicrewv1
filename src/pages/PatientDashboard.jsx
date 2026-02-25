@@ -51,7 +51,7 @@ export default function PatientDashboard() {
             <Sidebar />
             <main className="main-content">
                 <div className="page-header">
-                    <h1 className="page-title">{greeting}, {name} ≡ƒæï</h1>
+                    <h1 className="page-title">{greeting}, {name} 👋</h1>
                     <p className="page-subtitle">Here's your health summary for today</p>
                 </div>
                 <div className="page-content">
@@ -61,27 +61,27 @@ export default function PatientDashboard() {
                         <h2 className="section-title" style={{ margin: 0 }}>Live Vitals</h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--gray-500)' }}>
                             <div className="live-dot" />
-                            {device ? `Device: ${device.device_id}` : 'Simulated ┬╖ No device linked'}
+                            {device ? `Device: ${device.device_id}` : 'Simulated • No device linked'}
                         </div>
                     </div>
                     <div className="vitals-grid mb-6">
                         <div className="vital-card hr">
-                            <div className="vital-icon">Γ¥ñ∩╕Å</div>
+                            <div className="vital-icon">❤️</div>
                             <div className="vital-value">{vitals.hr}<span className="vital-unit">bpm</span></div>
                             <div className="vital-label">Heart Rate</div>
                         </div>
                         <div className="vital-card spo2">
-                            <div className="vital-icon">≡ƒÆº</div>
+                            <div className="vital-icon">💧</div>
                             <div className="vital-value">{vitals.spo2}<span className="vital-unit">%</span></div>
-                            <div className="vital-label">SpOΓéé</div>
+                            <div className="vital-label">SpO2</div>
                         </div>
                         <div className="vital-card temp">
-                            <div className="vital-icon">≡ƒîí∩╕Å</div>
-                            <div className="vital-value">{vitals.temp}<span className="vital-unit">┬░C</span></div>
+                            <div className="vital-icon">🌡️</div>
+                            <div className="vital-value">{vitals.temp}<span className="vital-unit">°C</span></div>
                             <div className="vital-label">Temperature</div>
                         </div>
                         <div className="vital-card bp">
-                            <div className="vital-icon">≡ƒ⌐║</div>
+                            <div className="vital-icon">🩺</div>
                             <div className="vital-value" style={{ fontSize: '1.25rem' }}>{vitals.bp}</div>
                             <div className="vital-label">Blood Pressure</div>
                         </div>
@@ -92,7 +92,7 @@ export default function PatientDashboard() {
                     <div className="grid-3 mb-6">
                         {[
                             { to: '/patient/ai', icon: Brain, label: 'AI Health Check', desc: 'Analyze symptoms with AI', color: '#7c3aed', bg: '#f3e8ff' },
-                            { to: '/patient/devices', icon: Cpu, label: 'My Device', desc: device ? 'Device connected Γ£ô' : 'Connect IoT device', color: '#059669', bg: '#ecfdf5' },
+                            { to: '/patient/devices', icon: Cpu, label: 'My Device', desc: device ? 'Device connected ✓' : 'Connect IoT device', color: '#059669', bg: '#ecfdf5' },
                             { to: '/patient/appointments', icon: Calendar, label: 'Appointments', desc: `${appointments.length} upcoming`, color: '#2563eb', bg: '#eff6ff' },
                         ].map(a => (
                             <Link key={a.to} to={a.to} style={{ textDecoration: 'none' }}>
@@ -112,7 +112,7 @@ export default function PatientDashboard() {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                 <h2 className="section-title" style={{ margin: 0 }}>Upcoming Appointments</h2>
-                                <Link to="/patient/appointments" style={{ fontSize: '0.875rem', color: 'var(--blue-600)' }}>View all ΓåÆ</Link>
+                                <Link to="/patient/appointments" style={{ fontSize: '0.875rem', color: 'var(--blue-600)' }}>View all →</Link>
                             </div>
                             {appointments.length === 0 ? (
                                 <div className="card empty-state">
@@ -137,7 +137,7 @@ export default function PatientDashboard() {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                 <h2 className="section-title" style={{ margin: 0 }}>Recent AI Results</h2>
-                                <Link to="/patient/ai" style={{ fontSize: '0.875rem', color: 'var(--blue-600)' }}>New check ΓåÆ</Link>
+                                <Link to="/patient/ai" style={{ fontSize: '0.875rem', color: 'var(--blue-600)' }}>New check →</Link>
                             </div>
                             {aiHistory.length === 0 ? (
                                 <div className="card empty-state">
