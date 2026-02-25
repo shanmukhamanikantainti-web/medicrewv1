@@ -8,10 +8,10 @@ import DeviceMonitor from './pages/DeviceMonitor'
 import Appointments from './pages/Appointments'
 import DoctorDashboard from './pages/DoctorDashboard'
 import AdminDashboard from './pages/AdminDashboard'
-import { AdminGate } from './components/AdminGate'
+import AdminVerify from './pages/AdminVerify'
 
 function ProtectedRoute({ children, allowedRoles }) {
-    const { user, profile, loading } = useAuth()
+    const { user, profile, loading, isAdminVerified } = useAuth()
 
     if (loading) return <div className="loading-screen"><div className="spinner" /><p>Loading MediCrew...</p></div>
 
@@ -84,6 +84,13 @@ function ProtectedRoute({ children, allowedRoles }) {
         return <Navigate to="/" replace />
     }
 
+    // Role-specific secondary checks
+    if (allowedRoles && (allowedRoles.includes('admin') || allowedRoles.includes('superadmin'))) {
+        if (!isAdminVerified) {
+            return <Navigate to="/admin/verify" replace />
+        }
+    }
+
     return children
 }
 
@@ -107,7 +114,6 @@ export default function App() {
 
     return (
         <>
-            <AdminGate />
             <Routes>
                 <Route path="/" element={
                     !user ? <Landing /> :
@@ -137,6 +143,12 @@ export default function App() {
                             <Route index element={<DoctorDashboard />} />
                             <Route path="appointments" element={<Appointments />} />
                         </Routes>
+                    </ProtectedRoute>
+                } />
+
+                <Route path="/admin/verify" element={
+                    <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                        <AdminVerify />
                     </ProtectedRoute>
                 } />
 
