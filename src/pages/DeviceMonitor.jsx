@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Cpu, Link2, WifiOff, Activity, RefreshCw } from 'lucide-react'
+import { Cpu, Link2, WifiOff, Activity, RefreshCw, AlertCircle } from 'lucide-react'
 
 // No longer using generateVitals simulation
 async function fetchDeviceData(ip) {
@@ -38,7 +38,7 @@ export default function DeviceMonitor() {
         if (!user) return
         supabase.from('devices').select('*').eq('patient_id', user.id).eq('status', 'active').single()
             .then(({ data }) => {
-                if (data) { setDevice(data); setVitals(generateVitals()) }
+                if (data) setDevice(data)
             })
     }, [user])
 
