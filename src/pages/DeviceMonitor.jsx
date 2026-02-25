@@ -7,13 +7,16 @@ import { Cpu, Link2, WifiOff, Activity, RefreshCw } from 'lucide-react'
 // No longer using generateVitals simulation
 async function fetchDeviceData(ip) {
     try {
+        const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
         const res = await fetch(`http://${ip}`, { mode: 'cors' })
         if (!res.ok) throw new Error('Device unreachable')
         const data = await res.json()
+
+        // Handling specific keys from user's JSON response
         return {
-            hr: data.heart_rate_bpm,
-            temp: data.temperature_c,
-            deviceId: data.device_id,
+            hr: data.heart_rate_bpm || data.hr || 0,
+            temp: data.temperature_c || data.temp || 0,
+            deviceId: data.device_id || 'Unknown',
             updatedAt: new Date().toLocaleTimeString()
         }
     } catch (err) {
@@ -72,8 +75,9 @@ export default function DeviceMonitor() {
         setLinking(true); setError('')
 
         // In this new flow, we use the Device ID to "detect" the device on the local network.
-        // For demonstration, if ID is HEALTH01, we use the IP from your image.
-        const detectedIp = deviceId.trim().toUpperCase() === 'HEALTH01' ? '10.54.100.170' : `${deviceId.trim().toLowerCase()}.local`
+        // Support for MC-0006 and HEALTH01
+        const cleanId = deviceId.trim().toUpperCase()
+        const detectedIp = cleanId === 'MC-0006' || cleanId === 'HEALTH01' ? '10.54.100.170' : `${deviceId.trim().toLowerCase()}.local`
 
         const { data: existing } = await supabase.from('devices').select('*').eq('device_id', deviceId.trim()).single()
 
@@ -145,7 +149,12 @@ export default function DeviceMonitor() {
                                         />
                                         <span style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>Try any ID like MC-0001 to simulate a device</span>
                                     </div>
-                                    {error && <div className="auth-error">{error}</div>}
+                                    {window.location.protocol === 'https:' && (
+                                        <div className="alert alert-error mb-4" style={{ fontSize: '0.8125rem', padding: '0.75rem' }}>
+                                            <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                                            Browsers block connection to local IPs via HTTPS. Please run locally at <strong>http://localhost:5173</strong>.
+                                        </div>
+                                    )}
                                     <button type="submit" className="btn btn-primary" disabled={linking} id="link-device-btn">
                                         {linking ? 'Linking...' : <><Link2 size={16} /> Link Device</>}
                                     </button>
