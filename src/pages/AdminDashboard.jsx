@@ -70,26 +70,38 @@ function UsersTab({ adminId }) {
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
+    const fetchUsers = () => {
+        setLoading(true)
         supabase.from('profiles').select('*').order('created_at', { ascending: false })
             .then(({ data }) => { setUsers(data || []); setLoading(false) })
+    }
+
+    useEffect(() => {
+        fetchUsers()
     }, [])
 
-    async function deleteUser(id, email) {
-        if (!confirm(`Remove user ${email}?`)) return
-        await supabase.from('profiles').update({ role: 'patient' }).eq('id', id)
+    async function resetUserRole(id, email) {
+        if (!confirm(`Reset role for ${email} to patient?`)) return
+        const { error } = await supabase.from('profiles').update({ role: 'patient', verified: false, temp_admin_expires_at: null, previous_role: null }).eq('id', id)
+        if (error) {
+            alert("Error resetting role: " + error.message)
+            return
+        }
         await logAudit(supabase, adminId, `Reset role for ${email}`, id)
-        setUsers(u => u.map(x => x.id === id ? { ...x, role: 'patient' } : x))
+        setUsers(u => u.map(x => x.id === id ? { ...x, role: 'patient', verified: false } : x))
     }
 
     const roleColor = { patient: 'badge-blue', doctor: 'badge-green', admin: 'badge-orange', superadmin: 'badge-red' }
 
     return (
         <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h2 className="section-title" style={{ margin: 0 }}>All Users <span className="badge badge-gray">{users.length}</span></h2>
+                <button className="btn btn-sm btn-outline" onClick={fetchUsers} disabled={loading}>
+                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh List
+                </button>
             </div>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem' }}>Loading...</div> : (
+            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : (
                 <div className="table-wrapper">
                     <table>
                         <thead><tr><th>Name / Email</th><th>Role</th><th>Verified</th><th>Actions</th></tr></thead>
@@ -104,7 +116,7 @@ function UsersTab({ adminId }) {
                                     <td>{u.verified ? <CheckCircle size={16} color="#16a34a" /> : <Clock size={16} color="#ca8a04" />}</td>
                                     <td>
                                         {u.role !== 'superadmin' && (
-                                            <button className="btn btn-sm btn-ghost" style={{ color: '#dc2626' }} onClick={() => deleteUser(u.id, u.email)}>
+                                            <button className="btn btn-sm btn-ghost" style={{ color: '#dc2626' }} onClick={() => resetUserRole(u.id, u.email)}>
                                                 <RefreshCw size={13} /> Reset Role
                                             </button>
                                         )}
@@ -123,10 +135,16 @@ function UsersTab({ adminId }) {
 function DoctorsTab({ adminId }) {
     const [doctors, setDoctors] = useState([])
     const [loading, setLoading] = useState(true)
+    const [showAddModal, setShowAddModal] = useState(false)
 
-    useEffect(() => {
+    const fetchDoctors = () => {
+        setLoading(true)
         supabase.from('profiles').select('*').eq('role', 'doctor').order('created_at', { ascending: false })
             .then(({ data }) => { setDoctors(data || []); setLoading(false) })
+    }
+
+    useEffect(() => {
+        fetchDoctors()
     }, [])
 
     async function approve(id, email) {
@@ -144,8 +162,19 @@ function DoctorsTab({ adminId }) {
 
     return (
         <div>
-            <h2 className="section-title">Doctor Management <span className="badge badge-gray">{doctors.length}</span></h2>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem' }}>Loading...</div> : doctors.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 className="section-title" style={{ margin: 0 }}>Doctor Management <span className="badge badge-gray">{doctors.length}</span></h2>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button className="btn btn-sm btn-outline" onClick={fetchDoctors} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                    </button>
+                    <button className="btn btn-sm btn-primary" onClick={() => setShowAddModal(true)}>
+                        <UserPlus size={14} /> Add Doctor
+                    </button>
+                </div>
+            </div>
+
+            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : doctors.length === 0 ? (
                 <div className="card empty-state"><Stethoscope size={40} style={{ color: 'var(--gray-300)' }} /><h3>No Doctors</h3></div>
             ) : (
                 <div className="table-wrapper">
@@ -173,6 +202,75 @@ function DoctorsTab({ adminId }) {
                     </table>
                 </div>
             )}
+
+            {showAddModal && <AddDoctorModal onClose={() => setShowAddModal(false)} onAdded={fetchDoctors} adminId={adminId} />}
+        </div>
+    )
+}
+
+function AddDoctorModal({ onClose, onAdded, adminId }) {
+    const [email, setEmail] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+    const [error, setError] = useState('')
+
+    async function handleAdd(e) {
+        e.preventDefault()
+        setError('')
+        setSubmitting(true)
+
+        try {
+            // Find user by email
+            const { data: user, error: findError } = await supabase.from('profiles').select('*').eq('email', email).single()
+
+            if (findError) throw new Error("User not found with this email.")
+            if (user.role === 'doctor') throw new Error("User is already a doctor.")
+
+            // Promote to doctor
+            const { error: promoError } = await supabase.from('profiles')
+                .update({ role: 'doctor', verified: true })
+                .eq('id', user.id)
+
+            if (promoError) throw promoError
+
+            await logAudit(supabase, adminId, `Promoted ${email} to doctor`, user.id)
+            onAdded()
+            onClose()
+        } catch (err) {
+            setError(err.message)
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3 className="modal-title">Add New Doctor</h3>
+                    <button className="btn btn-sm btn-ghost" onClick={onClose}><XCircle size={18} /></button>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+                    Promote an existing user to doctor status by their email.
+                </p>
+                <form onSubmit={handleAdd} className="form-group">
+                    <label className="form-label">User Email Address</label>
+                    <input
+                        type="email"
+                        className="form-input"
+                        placeholder="doctor@example.com"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        required
+                    />
+                    {error && <div style={{ color: '#dc2626', fontSize: '0.8125rem', marginTop: '0.5rem' }}>{error}</div>}
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                        <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+                        <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
+                            {submitting ? 'Adding...' : 'Add Doctor'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     )
 }
@@ -182,9 +280,14 @@ function DevicesTab({ adminId }) {
     const [devices, setDevices] = useState([])
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
+    const fetchDevices = () => {
+        setLoading(true)
         supabase.from('devices').select('*, patient:patient_id(full_name, email)').order('created_at', { ascending: false })
             .then(({ data }) => { setDevices(data || []); setLoading(false) })
+    }
+
+    useEffect(() => {
+        fetchDevices()
     }, [])
 
     async function toggle(dev) {
@@ -202,8 +305,13 @@ function DevicesTab({ adminId }) {
 
     return (
         <div>
-            <h2 className="section-title">Device Management <span className="badge badge-gray">{devices.length}</span></h2>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem' }}>Loading...</div> : devices.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 className="section-title" style={{ margin: 0 }}>Device Management <span className="badge badge-gray">{devices.length}</span></h2>
+                <button className="btn btn-sm btn-outline" onClick={fetchDevices} disabled={loading}>
+                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                </button>
+            </div>
+            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : devices.length === 0 ? (
                 <div className="card empty-state"><Cpu size={40} style={{ color: 'var(--gray-300)' }} /><h3>No Devices</h3></div>
             ) : (
                 <div className="table-wrapper">
@@ -237,17 +345,27 @@ function AppointmentsTab() {
     const [appts, setAppts] = useState([])
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
+    const fetchAppts = () => {
+        setLoading(true)
         supabase.from('appointments').select('*, patient:patient_id(full_name, email), doctor:doctor_id(full_name)').order('date', { ascending: false }).limit(50)
             .then(({ data }) => { setAppts(data || []); setLoading(false) })
+    }
+
+    useEffect(() => {
+        fetchAppts()
     }, [])
 
     const statusBadge = { pending: 'badge-yellow', confirmed: 'badge-green', cancelled: 'badge-red', completed: 'badge-gray' }
 
     return (
         <div>
-            <h2 className="section-title">All Appointments <span className="badge badge-gray">{appts.length}</span></h2>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem' }}>Loading...</div> : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 className="section-title" style={{ margin: 0 }}>All Appointments <span className="badge badge-gray">{appts.length}</span></h2>
+                <button className="btn btn-sm btn-outline" onClick={fetchAppts} disabled={loading}>
+                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                </button>
+            </div>
+            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : (
                 <div className="table-wrapper">
                     <table>
                         <thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Status</th><th>Notes</th></tr></thead>
@@ -277,10 +395,15 @@ function AdminsTab({ adminId, isSuperAdmin }) {
     const [granting, setGranting] = useState(false)
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
+    const fetchAdmins = () => {
+        setLoading(true)
         supabase.from('profiles').select('id, full_name, email, role, temp_admin_expires_at')
             .in('role', ['patient', 'doctor', 'admin']).order('created_at', { ascending: false })
             .then(({ data }) => { setUsers(data || []); setLoading(false) })
+    }
+
+    useEffect(() => {
+        fetchAdmins()
     }, [])
 
     async function grantAdmin() {
@@ -335,8 +458,13 @@ function AdminsTab({ adminId, isSuperAdmin }) {
 
             {/* Active temp admins */}
             <div>
-                <h2 className="section-title">Active Temporary Admins</h2>
-                {tempAdmins.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <h2 className="section-title" style={{ margin: 0 }}>Active Temporary Admins</h2>
+                    <button className="btn btn-sm btn-outline" onClick={fetchAdmins} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                    </button>
+                </div>
+                {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : tempAdmins.length === 0 ? (
                     <div className="card empty-state" style={{ padding: '2rem' }}><Shield size={36} style={{ color: 'var(--gray-300)' }} /><h3>No Temporary Admins</h3></div>
                 ) : (
                     <div className="table-wrapper">
@@ -367,15 +495,25 @@ function AuditTab() {
     const [logs, setLogs] = useState([])
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
+    const fetchLogs = () => {
+        setLoading(true)
         supabase.from('audit_logs').select('*, admin:admin_id(full_name, email)').order('created_at', { ascending: false }).limit(100)
             .then(({ data }) => { setLogs(data || []); setLoading(false) })
+    }
+
+    useEffect(() => {
+        fetchLogs()
     }, [])
 
     return (
         <div>
-            <h2 className="section-title">Audit Logs <span className="badge badge-gray">{logs.length}</span></h2>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem' }}>Loading...</div> : logs.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 className="section-title" style={{ margin: 0 }}>Audit Logs <span className="badge badge-gray">{logs.length}</span></h2>
+                <button className="btn btn-sm btn-outline" onClick={fetchLogs} disabled={loading}>
+                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                </button>
+            </div>
+            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : logs.length === 0 ? (
                 <div className="card empty-state"><ClipboardList size={40} style={{ color: 'var(--gray-300)' }} /><h3>No Logs Yet</h3><p>Admin actions will appear here</p></div>
             ) : (
                 <div className="table-wrapper">
