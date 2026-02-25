@@ -48,6 +48,7 @@ create table if not exists public.devices (
   spo2 int,
   temperature numeric(4,1),
   bp text,
+  ip_address text,
   created_at timestamptz default now()
 );
 

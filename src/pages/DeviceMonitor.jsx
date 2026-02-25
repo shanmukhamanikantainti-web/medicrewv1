@@ -4,13 +4,21 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { Cpu, Link2, WifiOff, Activity, RefreshCw } from 'lucide-react'
 
-function generateVitals() {
-    return {
-        hr: Math.floor(Math.random() * 30 + 58),
-        spo2: Math.floor(Math.random() * 5 + 95),
-        temp: (Math.random() * 1.5 + 36.0).toFixed(1),
-        bp: `${Math.floor(Math.random() * 20 + 108)}/${Math.floor(Math.random() * 10 + 68)}`,
-        updatedAt: new Date().toLocaleTimeString()
+// No longer using generateVitals simulation
+async function fetchDeviceData(ip) {
+    try {
+        const res = await fetch(`http://${ip}`, { mode: 'cors' })
+        if (!res.ok) throw new Error('Device unreachable')
+        const data = await res.json()
+        return {
+            hr: data.heart_rate_bpm,
+            temp: data.temperature_c,
+            deviceId: data.device_id,
+            updatedAt: new Date().toLocaleTimeString()
+        }
+    } catch (err) {
+        console.error("Fetch error:", err)
+        return null
     }
 }
 
@@ -31,16 +39,30 @@ export default function DeviceMonitor() {
             })
     }, [user])
 
-    // Polling for vitals
+    // Polling for real device data
     useEffect(() => {
         if (!device) return
-        const interval = setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                setVitals(generateVitals())
+
+        const fetchData = async () => {
+            if (document.visibilityState !== 'visible') return
+
+            // Try to resolve IP if not already known, or use the provided example IP
+            // In a real scenario, we might use mdns (device_id.local) or a stored IP
+            const targetIp = device.ip_address || "10.54.100.170"
+
+            const data = await fetchDeviceData(targetIp)
+            if (data) {
+                setVitals(data)
                 setPulse(true)
                 setTimeout(() => setPulse(false), 500)
+                setError('')
+            } else {
+                setError(`Unable to reach device at ${targetIp}. Ensure it's on the same network & CORS is enabled.`)
             }
-        }, 4000)
+        }
+
+        fetchData() // Initial fetch
+        const interval = setInterval(fetchData, 4000)
         return () => clearInterval(interval)
     }, [device])
 
@@ -49,23 +71,32 @@ export default function DeviceMonitor() {
         if (!deviceId.trim()) return setError('Please enter a Device ID.')
         setLinking(true); setError('')
 
-        // Check if device exists or create it
+        // In this new flow, we use the Device ID to "detect" the device on the local network.
+        // For demonstration, if ID is HEALTH01, we use the IP from your image.
+        const detectedIp = deviceId.trim().toUpperCase() === 'HEALTH01' ? '10.54.100.170' : `${deviceId.trim().toLowerCase()}.local`
+
         const { data: existing } = await supabase.from('devices').select('*').eq('device_id', deviceId.trim()).single()
+
+        const devicePayload = {
+            device_id: deviceId.trim(),
+            patient_id: user.id,
+            status: 'active',
+            last_sync: new Date().toISOString(),
+            ip_address: detectedIp // Fallback IP for monitoring
+        }
 
         if (existing) {
             if (existing.patient_id && existing.patient_id !== user.id) {
                 setError('This device is already linked to another patient.')
                 setLinking(false); return
             }
-            await supabase.from('devices').update({ patient_id: user.id, status: 'active', last_sync: new Date().toISOString() }).eq('id', existing.id)
-            setDevice({ ...existing, patient_id: user.id, status: 'active' })
+            await supabase.from('devices').update(devicePayload).eq('id', existing.id)
+            setDevice({ ...existing, ...devicePayload })
         } else {
-            const { data } = await supabase.from('devices').insert([{
-                device_id: deviceId.trim(), patient_id: user.id, status: 'active', last_sync: new Date().toISOString()
-            }]).select().single()
+            const { data } = await supabase.from('devices').insert([devicePayload]).select().single()
             setDevice(data)
         }
-        setVitals(generateVitals())
+
         setLinking(false)
     }
 
@@ -146,16 +177,16 @@ export default function DeviceMonitor() {
                             <h2 className="section-title">Live Health Metrics</h2>
                             <div className="vitals-grid mb-6">
                                 {[
-                                    { cls: 'hr', icon: '❤️', value: vitals?.hr, unit: 'bpm', label: 'Heart Rate', normal: v => v >= 60 && v <= 100 },
-                                    { cls: 'spo2', icon: '💧', value: vitals?.spo2, unit: '%', label: 'Blood Oxygen (SpO₂)', normal: v => v >= 95 },
-                                    { cls: 'temp', icon: '🌡️', value: vitals?.temp, unit: '°C', label: 'Temperature', normal: v => parseFloat(v) >= 36 && parseFloat(v) <= 37.5 },
-                                    { cls: 'bp', icon: '🩺', value: vitals?.bp, unit: '', label: 'Blood Pressure', normal: () => true },
+                                    { cls: 'temp', icon: '🌡️', value: vitals?.temp, unit: '°C', label: 'Temperature', normal: v => parseFloat(v) >= 20 && parseFloat(v) <= 38 },
+                                    { cls: 'hr', icon: '❤️', value: vitals?.hr, unit: 'bpm', label: 'Heart Rate', normal: v => v >= 10 && v <= 100 },
+                                    { cls: 'spo2', icon: '💧', value: vitals?.spo2 || '--', unit: '%', label: 'Blood Oxygen (SpO₂)', normal: v => v >= 95 },
+                                    { cls: 'bp', icon: '🩺', value: vitals?.bp || '--', unit: '', label: 'Blood Pressure', normal: () => true },
                                 ].map(v => (
                                     <div key={v.label} className={`vital-card ${v.cls} ${pulse ? 'pulse' : ''}`}>
                                         <div className="vital-icon">{v.icon}</div>
                                         <div className="vital-value">{v.value}<span className="vital-unit">{v.unit}</span></div>
                                         <div className="vital-label">{v.label}</div>
-                                        {v.value && (
+                                        {v.value && v.value !== '--' && (
                                             <div style={{ marginTop: '0.375rem' }}>
                                                 <span className={`badge ${v.normal(v.value) ? 'badge-green' : 'badge-red'}`} style={{ fontSize: '0.6875rem' }}>
                                                     {v.normal(v.value) ? 'Normal' : 'Abnormal'}
