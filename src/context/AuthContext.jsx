@@ -10,6 +10,9 @@ export function AuthProvider({ children }) {
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(true)
     const [debugLog, setDebugLog] = useState([])
+    const [isAdminVerified, setIsAdminVerified] = useState(() => {
+        return sessionStorage.getItem('admin_verified') === 'true'
+    })
 
     const addLog = (msg, type = 'info') => {
         console.log(`[DEBUG] ${msg}`)
@@ -127,6 +130,18 @@ export function AuthProvider({ children }) {
         await supabase.auth.signOut()
         setUser(null)
         setProfile(null)
+        setIsAdminVerified(false)
+        sessionStorage.removeItem('admin_verified')
+    }
+
+    const verifyAdmin = (code) => {
+        const ACCESS_CODE = 'DTI2026MEDICREW4240'
+        if (code === ACCESS_CODE) {
+            setIsAdminVerified(true)
+            sessionStorage.setItem('admin_verified', 'true')
+            return true
+        }
+        return false
     }
 
     async function updateProfile(updates) {
@@ -156,8 +171,8 @@ export function AuthProvider({ children }) {
     return (
         <AuthContext.Provider value={{
             user, profile, loading, role, debugLog, addLog,
-            isPatient, isDoctor, isAdmin, isSuperAdmin,
-            signOut, updateProfile, resetAuth, fetchProfile: () => user && fetchProfile(user)
+            isPatient, isDoctor, isAdmin, isSuperAdmin, isAdminVerified,
+            signOut, updateProfile, resetAuth, verifyAdmin, fetchProfile: () => user && fetchProfile(user)
         }}>
             {children}
         </AuthContext.Provider>
