@@ -81,10 +81,10 @@ function UsersTab({ adminId }) {
     }, [])
 
     async function deleteUser(id, email) {
-        if (!confirm(`PERMANENTLY DELETE user ${email}? This action cannot be undone.`)) return
-        const { error } = await supabase.from('profiles').delete().eq('id', id)
+        if (!confirm(`PERMANENTLY DELETE user ${email}? This action cannot be undone and will remove them from Authentication.`)) return
+        const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: id })
         if (error) {
-            alert("Error deleting user: " + error.message)
+            alert("Error deleting user: " + error.message + "\n\nNote: If this is the first time, make sure you've run the SQL function in Supabase.")
             return
         }
         await logAudit(supabase, adminId, `Deleted user ${email}`, id)
