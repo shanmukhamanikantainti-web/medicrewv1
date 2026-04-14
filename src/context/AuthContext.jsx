@@ -59,22 +59,30 @@ export function AuthProvider({ children }) {
         }
     }, [])
 
-    async function fetchProfile(authUser) {
+    async function fetchProfile(authUser, attempt = 1) {
+        const MAX_ATTEMPTS = 3
         if (!authUser) return
-        addLog(`🚀 Profile Fetch Start: ${authUser.email}`)
-        window.supabase = supabase // Expose for manual console debugging
+        addLog(`🚀 Profile Fetch Start: ${authUser.email} (attempt ${attempt}/${MAX_ATTEMPTS})`)
+        window.supabase = supabase
 
         try {
             addLog('📡 Sending SELECT request to profiles table...')
 
-            // Race the database request against a 5s timeout
+            // Race the database request against a 10s timeout
             const fetchPromise = supabase.from('profiles').select('*').eq('id', authUser.id).single()
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 5000))
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 10000))
 
             const result = await Promise.race([fetchPromise, timeoutPromise])
 
             if (result.timedOut) {
-                addLog('❌ DATABASE REQUEST TIMED OUT (5s). Connection blocked?', 'error')
+                addLog(`❌ DATABASE REQUEST TIMED OUT (10s) on attempt ${attempt}.`, 'error')
+                if (attempt < MAX_ATTEMPTS) {
+                    const delay = attempt * 2000
+                    addLog(`⏳ Retrying in ${delay / 1000}s...`, 'warn')
+                    await new Promise(r => setTimeout(r, delay))
+                    return fetchProfile(authUser, attempt + 1)
+                }
+                addLog('🚫 All retry attempts exhausted. Run supabase_fix_rls.sql in your Supabase dashboard.', 'error')
                 return setLoading(false)
             }
 
@@ -84,7 +92,8 @@ export function AuthProvider({ children }) {
             if (error) {
                 addLog(`🟡 Profile not found or error: ${error.message} (${error.code})`, 'warn')
 
-                if (error.code === 'PGRST116' || error.message.includes('JSON object')) {
+                // PGRST116 = no rows returned — profile doesn't exist yet
+                if (error.code === 'PGRST116' || error.message?.includes('JSON object')) {
                     addLog('🛠️ Attempting to create profile record...')
                     const role = authUser.email === SUPERADMIN_EMAIL ? 'superadmin' : (authUser.user_metadata?.role || 'patient')
 
@@ -92,7 +101,7 @@ export function AuthProvider({ children }) {
                         id: authUser.id,
                         email: authUser.email,
                         role,
-                        full_name: authUser.email.split('@')[0],
+                        full_name: authUser.user_metadata?.full_name || authUser.email.split('@')[0],
                         verified: authUser.email === SUPERADMIN_EMAIL
                     }
                     addLog(`📦 Data payload: ${JSON.stringify(profileData)}`)
@@ -107,14 +116,17 @@ export function AuthProvider({ children }) {
                         addLog(`❌ DATABASE INSERT FAILED: ${insertError.message}`, 'error')
                         if (insertError.details) addLog(`Details: ${insertError.details}`, 'error')
 
-                        // Check for Foreign Key Violation (Error code 23503 in PostgreSQL)
-                        // This happens if the user was deleted from Supabase Auth but the session persists
                         if (insertError.code === '23503') {
+                            // FK violation: auth user missing, force sign out
                             addLog('⚠️ User record missing in Auth. Signing out...', 'warn')
                             await signOut()
+                        } else if (insertError.code === '23505') {
+                            // Unique violation: trigger already created the profile — just refetch
+                            addLog('ℹ️ Profile created by trigger (race condition). Refetching...', 'warn')
+                            await new Promise(r => setTimeout(r, 500))
+                            return fetchProfile(authUser, attempt)
                         } else {
-                            // Alert provides immediate visibility for other database errors
-                            alert(`Database Error: ${insertError.message}. Check the DEBUG logs in the app.`)
+                            addLog(`❌ Unhandled insert error: ${insertError.code}`, 'error')
                         }
                     } else {
                         addLog('✅ Profile created successfully!')
@@ -122,6 +134,12 @@ export function AuthProvider({ children }) {
                     }
                 } else {
                     addLog(`❌ Unexpected fetch error: ${error.message}`, 'error')
+                    if (attempt < MAX_ATTEMPTS) {
+                        const delay = attempt * 2000
+                        addLog(`⏳ Retrying in ${delay / 1000}s...`, 'warn')
+                        await new Promise(r => setTimeout(r, delay))
+                        return fetchProfile(authUser, attempt + 1)
+                    }
                 }
             } else if (data) {
                 addLog(`✅ Profile loaded successfully. Role: ${data.role}`)

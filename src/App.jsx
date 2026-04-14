@@ -12,7 +12,8 @@ import AdminVerify from './pages/AdminVerify'
 import { AdminShortcut } from './components/AdminShortcut'
 
 function ProtectedRoute({ children, allowedRoles }) {
-    const { user, profile, loading, isAdminVerified } = useAuth()
+    // ALL hooks must be called at the top level, unconditionally
+    const { user, profile, loading, isAdminVerified, fetchProfile, debugLog, resetAuth } = useAuth()
 
     if (loading) return <div className="loading-screen"><div className="spinner" /><p>Loading MediCrew...</p></div>
 
@@ -20,7 +21,6 @@ function ProtectedRoute({ children, allowedRoles }) {
 
     // If user exists but profile couldn't be loaded/created
     if (!profile) {
-        const { fetchProfile, debugLog, resetAuth } = useAuth()
         return (
             <div className="dashboard-layout" style={{ justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '2rem' }}>
                 <div className="card" style={{ maxWidth: 600, width: '100%', padding: '2.5rem' }}>
