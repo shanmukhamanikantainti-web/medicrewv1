@@ -232,20 +232,34 @@ export default function DeviceMonitor() {
         const cleanId = deviceId.trim().toUpperCase()
         const payload = { device_id: cleanId, patient_id: user.id, status: 'active', last_sync: new Date().toISOString() }
 
-        const { data: existing } = await supabase.from('devices').select('*').eq('device_id', cleanId).maybeSingle()
+        try {
+            const { data: existing } = await supabase.from('devices').select('*').eq('device_id', cleanId).maybeSingle()
 
-        if (existing) {
-            if (existing.patient_id && existing.patient_id !== user.id) {
-                setError('This device is already linked to another patient.')
-                setLinking(false); return
+            if (existing) {
+                if (existing.patient_id && existing.patient_id !== user.id) {
+                    setError('This device is already linked to another patient.')
+                    setLinking(false); return
+                }
+                await supabase.from('devices').update(payload).eq('id', existing.id)
+                setDevice({ ...existing, ...payload })
+            } else {
+                const { data } = await supabase.from('devices').insert([payload]).select().maybeSingle()
+                setDevice(data)
             }
-            await supabase.from('devices').update(payload).eq('id', existing.id)
-            setDevice({ ...existing, ...payload })
-        } else {
-            const { data } = await supabase.from('devices').insert([payload]).select().maybeSingle()
-            setDevice(data)
+
+            // Immediately start scanning or connect to manual IP
+            if (manualIp) {
+                setFoundIp(manualIp)
+                setConnStatus('live')
+                pollHardware(manualIp)
+            } else {
+                scanLocalNetwork()
+            }
+        } catch (err) {
+            setError(err.message)
+        } finally {
+            setLinking(false)
         }
-        setLinking(false)
     }
 
     async function handleUnlink() {
@@ -285,7 +299,7 @@ export default function DeviceMonitor() {
                                 </div>
 
                                 <form onSubmit={handleLink} style={{ padding:'0 2rem 2.5rem' }}>
-                                    <div className="form-group" style={{ marginBottom: '2rem' }}>
+                                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                                         <label className="form-label" style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>Device ID (Health Badge Code)</label>
                                         <div style={{ position:'relative' }}>
                                             <input
@@ -298,6 +312,22 @@ export default function DeviceMonitor() {
                                             />
                                             <Cpu size={24} style={{ position:'absolute', left:'1.25rem', top:'50%', transform:'translateY(-50%)', color:'var(--secondary-color)' }} />
                                         </div>
+                                    </div>
+
+                                    <div className="form-group" style={{ marginBottom: '2rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>Hardware IP Address (Optional for faster sync)</label>
+                                        <div style={{ position:'relative' }}>
+                                            <input
+                                                id="device-ip-input"
+                                                className="form-input"
+                                                placeholder="e.g. 10.249.96.170"
+                                                style={{ height:'4rem', fontSize:'1.25rem', fontWeight:800, paddingLeft:'4rem', borderRadius: 16, border: '2px solid rgba(0,0,0,0.05)' }}
+                                                value={manualIp}
+                                                onChange={e => setManualIp(e.target.value)}
+                                            />
+                                            <Globe size={24} style={{ position:'absolute', left:'1.25rem', top:'50%', transform:'translateY(-50%)', color:'var(--secondary-color)', opacity: 0.5 }} />
+                                        </div>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '0.5rem' }}>If you know your device's IP, enter it here to skip scanning.</p>
                                     </div>
 
                                     {error && (
