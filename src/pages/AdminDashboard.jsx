@@ -870,4 +870,3 @@ function StatsTab() {
     )
 }
 
-export default AdminDashboard
