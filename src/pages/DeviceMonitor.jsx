@@ -52,7 +52,7 @@ export default function DeviceMonitor() {
     // ── Supabase Realtime (Live Data listener) ───────────────────────────────
     useEffect(() => {
         if (!device || isSimulating) return
-        setConnStatus('idle')
+        setConnStatus('scanning') // Start scanning when device is loaded
 
         const channel = supabase
             .channel(`readings-${device.device_id}`)
@@ -95,36 +95,27 @@ export default function DeviceMonitor() {
                 setScanProgress(Math.floor((i / 255) * 100))
 
                 try {
-                    // We use image probing to bypass CORS/Fetch restrictions for discovery
                     const probe = new Image()
                     const probePromise = new Promise((resolve, reject) => {
                         probe.onload = () => resolve(true)
                         probe.onerror = () => reject(false)
-                        // Most devices serve an icon or empty response at root
                         probe.src = `http://${ip}/favicon.ico?t=${Date.now()}` 
-                        setTimeout(() => reject(false), 200) // Fast timeout for discovery
+                        setTimeout(() => reject(false), 300) 
                     })
 
                     await probePromise
-                    console.log(`📡 Device signal detected at ${ip}`)
                     setFoundIp(ip)
-                    
-                    // Attempt to fetch actual JSON
-                    const res = await fetch(`http://${ip}/data`, { mode: 'no-cors' })
-                    // Note: 'no-cors' allows the request but hides the body. 
-                    // This is enough to know a device exists there.
                     detected = true
                     setConnStatus('live')
                     break
                 } catch (e) {
-                    // Continue scanning
+                    // Continue
                 }
             }
         }
 
-        if (!detected) {
-            setConnStatus('blocked')
-            setError('No device auto-detected. Browser security policy (HTTPS) might be blocking local network access.')
+        if (!detected && connStatus !== 'live') {
+            setConnStatus('idle') // Return to idle if not found
         }
         scanRef.current = false
     }
@@ -135,7 +126,11 @@ export default function DeviceMonitor() {
             .from('device_readings').select('*')
             .eq('device_id', devId)
             .order('recorded_at', { ascending: false }).limit(10)
-        if (data?.length) { setVitals(data[0]); setHistory(data); setConnStatus('live') }
+        if (data?.length) { 
+            setVitals(data[0])
+            setHistory(data)
+            setConnStatus('live')
+        }
     }, [])
 
     async function handleLink(e) {
@@ -144,9 +139,9 @@ export default function DeviceMonitor() {
         setLinking(true); setError('')
 
         const cleanId = deviceId.trim().toUpperCase()
-        const { data: existing } = await supabase.from('devices').select('*').eq('device_id', cleanId).maybeSingle()
-
         const payload = { device_id: cleanId, patient_id: user.id, status: 'active', last_sync: new Date().toISOString() }
+
+        const { data: existing } = await supabase.from('devices').select('*').eq('device_id', cleanId).maybeSingle()
 
         if (existing) {
             if (existing.patient_id && existing.patient_id !== user.id) {
@@ -160,7 +155,6 @@ export default function DeviceMonitor() {
             setDevice(data)
         }
         setLinking(false)
-        scanLocalNetwork() // Start scanning immediately after linking
     }
 
     async function handleUnlink() {
@@ -195,7 +189,7 @@ export default function DeviceMonitor() {
                                         Zero-Setup Connectivity
                                     </h3>
                                     <p style={{ color:'var(--gray-500)', fontSize:'1rem', lineHeight:1.6, maxWidth: 450, margin: '0 auto' }}>
-                                        MediCrew now scans your local network automatically. Simply enter your Device ID to begin secure telemetry mapping.
+                                        MediCrew scans your local network automatically. Simply enter your Device ID to begin secure telemetry mapping.
                                     </p>
                                 </div>
 
@@ -204,6 +198,7 @@ export default function DeviceMonitor() {
                                         <label className="form-label" style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>Device ID (Health Badge Code)</label>
                                         <div style={{ position:'relative' }}>
                                             <input
+                                                id="device-id-input"
                                                 className="form-input"
                                                 placeholder="e.g. MEDICREW-X1"
                                                 style={{ height:'4rem', fontSize:'1.25rem', fontWeight:800, paddingLeft:'4rem', borderRadius: 16, border: '2px solid rgba(0,0,0,0.05)' }}
@@ -220,7 +215,7 @@ export default function DeviceMonitor() {
                                         </div>
                                     )}
 
-                                    <button type="submit" className="btn btn-primary" style={{ height:'4rem', fontSize:'1.1rem', width: '100%', borderRadius: 16, boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.4)' }} disabled={linking}>
+                                    <button type="submit" id="link-device-btn" className="btn btn-primary" style={{ height:'4rem', fontSize:'1.1rem', width: '100%', borderRadius: 16, boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.4)' }} disabled={linking}>
                                         {linking ? <><RefreshCw className="spin" /> Syncing Cloud Registry...</> : <><Shield size={20} /> Establish Secure Connection</>}
                                     </button>
 
@@ -240,111 +235,50 @@ export default function DeviceMonitor() {
                             </div>
                         </div>
                     ) : (
-                        /* ── LIVE AUTO-DETECT VIEW ── */
+                        /* ── LIVE VIEW ── */
                         <div className="animate-fade-in">
-                            {/* Connection Radar Overlay */}
+                            {/* Header Status Bar (Always Visible when device exists) */}
+                            <div className="glass-panel" style={{ padding:'1.25rem 2rem', marginBottom:'1.5rem', display:'flex', justifyContent:'space-between', alignItems:'center', borderRadius:20 }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:'1.5rem' }}>
+                                    <div className="status-orb-container">
+                                        <div className="status-orb" style={{ background: connStatus === 'live' ? '#22c55e' : (connStatus === 'scanning' ? '#3b82f6' : '#f59e0b') }}></div>
+                                        {(connStatus === 'live' || connStatus === 'scanning') && <div className="status-orb-ping" style={{ background: connStatus === 'live' ? '#22c55e' : '#3b82f6' }}></div>}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight:900, fontSize:'1.1rem' }}>ID: {device.device_id}</div>
+                                        <div style={{ fontSize:'0.75rem', fontWeight:600, color:'var(--gray-400)', display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                                            {connStatus === 'live' ? <><CheckCircle size={12} /> Live Connection</> : <><Search size={12} className="spin" /> Discovering Signal...</>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display:'flex', gap:'1rem' }}>
+                                    <button className="btn btn-secondary btn-sm" onClick={scanLocalNetwork} disabled={connStatus === 'scanning'}>
+                                        <Search size={14} /> {connStatus === 'scanning' ? 'Scanning...' : 'Re-Scan Network'}
+                                    </button>
+                                    <button className="btn btn-ghost btn-sm" onClick={handleUnlink} style={{ color:'var(--danger-color)' }}>
+                                        <X size={14} /> Disconnect
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* SCANNING RADAR (Visual feedback during discovery) */}
                             {connStatus === 'scanning' && (
-                                <div className="glass-panel section-container" style={{ textAlign: 'center', padding: '4rem 2rem', border: '2px dashed var(--secondary-color)', background: 'rgba(56, 189, 248, 0.02)' }}>
+                                <div className="glass-panel section-container" style={{ textAlign: 'center', padding: '3rem 2rem', marginBottom: '1.5rem', border: '2px dashed var(--secondary-color)', background: 'rgba(56, 189, 248, 0.02)' }}>
                                     <div className="radar-container">
                                         <div className="radar-sweep"></div>
-                                        <div className="radar-dot" style={{ top: '30%', left: '70%', animationDelay: '0.5s' }}></div>
-                                        <div className="radar-dot" style={{ top: '60%', left: '20%', animationDelay: '1.2s' }}></div>
-                                        <Search size={40} className="radar-icon" />
+                                        <Search size={32} className="radar-icon" />
                                     </div>
-                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '2rem' }}>Scanning Local Network...</h2>
-                                    <p style={{ color: 'var(--gray-500)', maxWidth: 400, margin: '1rem auto' }}>
-                                        System is automatically probing your network for device <strong>{device.device_id}</strong>.
-                                    </p>
-                                    <div className="progress-bar-container" style={{ maxWidth: 300, margin: '2rem auto' }}>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '1.5rem' }}>Probing Your Network...</h3>
+                                    <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0 1.5rem' }}>Attempting to find device hardware on local subnets.</p>
+                                    <div className="progress-bar-container" style={{ maxWidth: 300, margin: '0 auto' }}>
                                         <div className="progress-bar-fill" style={{ width: `${scanProgress}%` }}></div>
                                     </div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', fontWeight: 600 }}>PROBING SUBNET: 10.54.100.X ({scanProgress}%)</div>
                                 </div>
                             )}
 
-                            {/* Blocked / Troubleshooting View */}
-                            {connStatus === 'blocked' && (
-                                <div className="glass-panel section-container" style={{ padding: '2rem' }}>
-                                    <div style={{ display:'flex', gap:'2rem', alignItems:'flex-start' }}>
-                                        <div style={{ background:'rgba(239, 68, 68, 0.1)', padding:'1.5rem', borderRadius:20, color:'#ef4444' }}>
-                                            <Shield size={48} />
-                                        </div>
-                                        <div style={{ flex:1 }}>
-                                            <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:'0.5rem' }}>Browser Security Blocked Device Access</h2>
-                                            <p style={{ color:'var(--gray-500)', marginBottom:'1.5rem' }}>
-                                                Because MediCrew uses a secure HTTPS connection, the browser blocks direct retrieval from your local network device (HTTP) for privacy.
-                                            </p>
-                                            
-                                            <div style={{ background:'var(--gray-50)', padding:'1.5rem', borderRadius:16, border:'1px solid var(--gray-200)', marginBottom:'1.5rem' }}>
-                                                <h4 style={{ fontWeight:800, marginBottom:'1rem', fontSize:'0.9rem', textTransform:'uppercase', color:'var(--gray-700)' }}>Choose your solution:</h4>
-                                                
-                                                <div style={{ display:'grid', gap:'1rem' }}>
-                                                    {/* Solution 1: Chrome Allow */}
-                                                    <div className="troubleshoot-step">
-                                                        <div className="step-badge">1</div>
-                                                        <div className="step-content">
-                                                            <strong>Browser Level: Allow Insecure Content</strong>
-                                                            <p>Click the <strong>Shield/Lock</strong> icon in the address bar → <strong>Site Settings</strong> → Set <strong>Insecure Content</strong> to <strong>Allow</strong>.</p>
-                                                            <button className="btn btn-secondary btn-sm" onClick={() => window.location.reload()} style={{ marginTop:'0.5rem' }}>
-                                                                <RefreshCw size={14} /> Refresh to Apply
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Solution 2: Arduino Direct Cloud */}
-                                                    <div className="troubleshoot-step">
-                                                        <div className="step-badge">2</div>
-                                                        <div className="step-content">
-                                                            <strong>Hardware Level: Direct-to-Cloud (Best)</strong>
-                                                            <p>Update your device code to push directly to our cloud. No browser settings needed.</p>
-                                                            <button className="btn btn-ghost btn-sm" onClick={() => {
-                                                                const code = `#include <HTTPClient.h>\nvoid pushVitals(int hr, float temp) {\n  HTTPClient http;\n  http.begin("https://raroozindajlweijpxnw.supabase.co/rest/v1/device_readings");\n  http.addHeader("apikey", "YOUR_ANON_KEY");\n  http.POST("{\\"device_id\\":\\"HEALTH01\\",\\"heart_rate\\":72}");\n}`;
-                                                                navigator.clipboard.writeText(code);
-                                                                alert('Arduino C++ snippet copied to clipboard!');
-                                                            }}>
-                                                                <Terminal size={14} /> Copy Arduino Snippet
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <button className="btn btn-primary" onClick={scanLocalNetwork}>
-                                                <RefreshCw size={18} /> Retry Discovery
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Live Data Dashboard */}
-                            {(connStatus === 'live' || vitals) && (
+                            {/* DATA DASHBOARD */}
+                            {(connStatus === 'live' || vitals) ? (
                                 <div className="animate-fade-in">
-                                    {/* Header Status Bar */}
-                                    <div className="glass-panel" style={{ padding:'1.25rem 2rem', marginBottom:'1.5rem', display:'flex', justifyContent:'space-between', alignItems:'center', borderRadius:20 }}>
-                                        <div style={{ display:'flex', alignItems:'center', gap:'1.5rem' }}>
-                                            <div className="status-orb-container">
-                                                <div className="status-orb" style={{ background: '#22c55e' }}></div>
-                                                <div className="status-orb-ping" style={{ background: '#22c55e' }}></div>
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight:900, fontSize:'1.1rem' }}>{device.device_id}</div>
-                                                <div style={{ fontSize:'0.75rem', fontWeight:600, color:'var(--gray-400)', display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                                                    <Globe size={12} /> Active at {foundIp || 'Linked Registry'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={{ display:'flex', gap:'1rem' }}>
-                                            <button className="btn btn-secondary btn-sm" onClick={scanLocalNetwork}>
-                                                <Search size={14} /> Re-Scan Network
-                                            </button>
-                                            <button className="btn btn-ghost btn-sm" onClick={handleUnlink} style={{ color:'var(--danger-color)' }}>
-                                                <X size={14} /> Disconnect
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Vital Cards Grid */}
                                     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:'1.5rem', marginBottom:'2rem' }}>
                                         {VITALS.map(cfg => {
                                             const Icon = cfg.icon;
@@ -352,31 +286,19 @@ export default function DeviceMonitor() {
                                             const isNormal = val ? cfg.normal(val) : true;
                                             return (
                                                 <div key={cfg.key} className={`vital-card-premium ${pulse ? 'pulse-heavy' : ''}`} style={{ 
-                                                    background: cfg.bg, 
-                                                    border: `1px solid ${cfg.border}`,
-                                                    borderRadius: 24,
-                                                    padding: '2rem',
-                                                    position: 'relative',
-                                                    overflow: 'hidden'
+                                                    background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 24, padding: '2rem', position: 'relative', overflow: 'hidden'
                                                 }}>
-                                                    <div className="card-bg-icon">
-                                                        <Icon size={120} style={{ opacity: 0.03, color: cfg.color }} />
-                                                    </div>
+                                                    <div className="card-bg-icon"><Icon size={120} style={{ opacity: 0.03, color: cfg.color }} /></div>
                                                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: '1.5rem' }}>
                                                         <div style={{ background: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                                                             <Icon size={24} style={{ color: cfg.color }} />
                                                         </div>
-                                                        <div style={{ 
-                                                            fontSize: '0.75rem', fontWeight: 800, padding: '4px 12px', borderRadius: 20,
-                                                            background: isNormal ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                            color: isNormal ? '#16a34a' : '#ef4444'
-                                                        }}>
-                                                            {isNormal ? 'OPTIMAL' : 'ATTENTION'}
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: isNormal ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: isNormal ? '#16a34a' : '#ef4444' }}>
+                                                            {isNormal ? 'OPTIMAL' : 'ALERT'}
                                                         </div>
                                                     </div>
                                                     <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--gray-900)', letterSpacing: '-0.05em', lineHeight: 1 }}>
-                                                        {val || '--'}
-                                                        <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--gray-400)', marginLeft: '4px' }}>{cfg.unit}</span>
+                                                        {val || '--'}<span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--gray-400)', marginLeft: '4px' }}>{cfg.unit}</span>
                                                     </div>
                                                     <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--gray-500)', marginTop: '0.5rem' }}>{cfg.label}</div>
                                                 </div>
@@ -384,7 +306,6 @@ export default function DeviceMonitor() {
                                         })}
                                     </div>
 
-                                    {/* Real-time Telemetry Log */}
                                     <div className="glass-panel section-container">
                                         <div className="section-header">
                                             <Terminal size={18} style={{ color: 'var(--secondary-color)' }} />
@@ -392,30 +313,41 @@ export default function DeviceMonitor() {
                                         </div>
                                         <div className="table-wrapper">
                                             <table className="ethereal-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Timestamp</th>
-                                                        <th>Heart Rate</th>
-                                                        <th>SpO₂</th>
-                                                        <th>Temp</th>
-                                                        <th>Signal</th>
-                                                    </tr>
-                                                </thead>
+                                                <thead><tr><th>Timestamp</th><th>Heart Rate</th><th>Temp</th><th>Signal</th></tr></thead>
                                                 <tbody>
                                                     {history.map((r, i) => (
                                                         <tr key={i} className="log-row">
                                                             <td><span className="timestamp-mono">{new Date(r.recorded_at).toLocaleTimeString()}</span></td>
-                                                            <td><span style={{ fontWeight:700 }}>{r.heart_rate}</span> <small>bpm</small></td>
-                                                            <td><span style={{ fontWeight:700 }}>{r.spo2}%</span></td>
+                                                            <td><span style={{ fontWeight:700 }}>{r.heart_rate} bpm</span></td>
                                                             <td><span style={{ fontWeight:700 }}>{r.temperature}°C</span></td>
                                                             <td><div className="signal-bars"><div className="bar active"></div><div className="bar active"></div><div className="bar active"></div><div className="bar"></div></div></td>
                                                         </tr>
                                                     ))}
-                                                    {history.length === 0 && (
-                                                        <tr><td colSpan="5" style={{ textAlign:'center', color:'var(--gray-400)', padding:'3rem' }}>No data packets captured yet...</td></tr>
-                                                    )}
                                                 </tbody>
                                             </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* TROUBLESHOOTING / AWAITING DATA */
+                                <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', background: 'rgba(0,0,0,0.01)', border: '2px dashed var(--gray-200)', borderRadius: 24 }}>
+                                    <div style={{ width: 64, height: 64, background: 'var(--gray-100)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                                        <Activity size={32} style={{ color: 'var(--gray-300)' }} />
+                                    </div>
+                                    <h3 style={{ fontWeight: 800, color: 'var(--gray-600)' }}>Waiting for Data Packets</h3>
+                                    <p style={{ color: 'var(--gray-400)', maxWidth: 450, margin: '0.5rem auto 1.5rem' }}>
+                                        Connection to <strong>{device.device_id}</strong> is active. We are awaiting the first telemetry packet from your hardware.
+                                    </p>
+                                    
+                                    <div style={{ background:'white', padding:'1.5rem', borderRadius:16, border:'1px solid var(--gray-200)', margin:'0 auto', maxWidth:500, textAlign:'left' }}>
+                                        <h4 style={{ fontWeight:800, marginBottom:'1rem', fontSize:'0.85rem', color:'var(--gray-700)' }}>Experiencing issues?</h4>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', display: 'grid', gap: '1rem' }}>
+                                            <div>
+                                                <strong>1. Bowser Block:</strong> If site is HTTPS and device is HTTP, click the <strong>Lock icon</strong> in URL bar → <strong>Site Settings</strong> → <strong>Insecure Content</strong> → <strong>Allow</strong>.
+                                            </div>
+                                            <div>
+                                                <strong>2. Device Code:</strong> Ensure your Arduino code is pushing to our API. Copy the snippet from the documentation to confirm.
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -426,22 +358,15 @@ export default function DeviceMonitor() {
             </main>
 
             <style>{`
-                .pulse-icon-container { position: relative; width: 100px; height: 100px; margin: 0 auto 2rem; display: flex; alignItems: center; justifyContent: center; }
+                .pulse-icon-container { position: relative; width: 100px; height: 100px; margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; }
                 .pulse-icon { color: var(--secondary-color); z-index: 2; }
                 .pulse-ring { position: absolute; width: 100%; height: 100%; border: 3px solid var(--secondary-color); border-radius: 50%; opacity: 0; animation: ping-circle 2s cubic-bezier(0,0,0.2,1) infinite; }
                 @keyframes ping-circle { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2); opacity: 0; } }
                 
-                .radar-container { position: relative; width: 120px; height: 120px; margin: 0 auto; border: 2px solid rgba(56, 189, 248, 0.2); border-radius: 50%; display: flex; alignItems: center; justifyContent: center; overflow: hidden; }
+                .radar-container { position: relative; width: 100px; height: 100px; margin: 0 auto; border: 2px solid rgba(56, 189, 248, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
                 .radar-sweep { position: absolute; width: 50%; height: 50%; background: linear-gradient(45deg, var(--secondary-color), transparent); top: 0; left: 50%; transform-origin: left bottom; animation: sweep 2s linear infinite; }
                 @keyframes sweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                .radar-dot { position: absolute; width: 6px; height: 6px; background: var(--secondary-color); border-radius: 50%; box-shadow: 0 0 10px var(--secondary-color); animation: blink 1s infinite alternate; }
-                @keyframes blink { from { opacity: 0; } to { opacity: 1; } }
                 .radar-icon { color: var(--secondary-color); z-index: 5; }
-
-                .troubleshoot-step { display: flex; gap: 1rem; padding: 1rem; border-radius: 12px; transition: background 0.2s; }
-                .troubleshoot-step:hover { background: rgba(0,0,0,0.02); }
-                .step-badge { width: 28px; height: 28px; borderRadius: 50%; background: var(--gray-900); color: white; display: flex; alignItems: center; justifyContent: center; fontSize: 0.8rem; fontWeight: 800; flexShrink: 0; }
-                .step-content p { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.25rem; line-height: 1.4; }
 
                 .vital-card-premium { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s; }
                 .vital-card-premium:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
@@ -463,7 +388,9 @@ export default function DeviceMonitor() {
                 .signal-bars .bar:nth-child(4) { height: 14px; }
                 .signal-bars .bar.active { background: #22c55e; }
 
-                .timestamp-mono { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--gray-500); background: var(--gray-100); padding: 2px 6px; borderRadius: 4px; }
+                .timestamp-mono { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--gray-500); background: var(--gray-100); padding: 2px 6px; border-radius: 4px; }
+                .progress-bar-container { width: 100%; height: 8px; background: var(--gray-100); border-radius: 10px; overflow: hidden; }
+                .progress-bar-fill { height: 100%; background: var(--secondary-color); transition: width 0.3s; }
             `}</style>
         </div>
     )
