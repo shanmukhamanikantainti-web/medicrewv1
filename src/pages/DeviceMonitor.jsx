@@ -11,10 +11,10 @@ import {
 
 // ── Vitals Configuration ──────────────────────────────────────────────────────
 const VITALS = [
-    { key:'heart_rate',     label:'Heart Rate',     unit:'bpm',  icon:Heart,       color:'#ef4444', bg:'rgba(239,68,68,0.08)',  border:'rgba(239,68,68,0.2)',  normal:v=>v>=50&&v<=110 },
-    { key:'temperature',    label:'Temperature',    unit:'°C',   icon:Thermometer, color:'#f97316', bg:'rgba(249,115,22,0.08)', border:'rgba(249,115,22,0.2)', normal:v=>parseFloat(v)>=36&&parseFloat(v)<=37.5 },
-    { key:'spo2',           label:'Blood Oxygen',   unit:'%',    icon:Droplet,     color:'#3b82f6', bg:'rgba(59,130,246,0.08)', border:'rgba(59,130,246,0.2)', normal:v=>v>=95 },
-    { key:'blood_pressure', label:'Blood Pressure', unit:'mmHg', icon:Gauge,       color:'#8b5cf6', bg:'rgba(139,92,246,0.08)', border:'rgba(139,92,246,0.2)', normal:()=>true },
+    { key:'heart_rate',     label:'Heart Rate',     unit:'bpm',  icon:Heart,       color:'#ef4444', bg:'rgba(239,68,68,0.08)',  border:'rgba(239,68,68,0.2)',  normal:v=>v>=50&&v<=110, alias:['heart_rate_bpm', 'bpm'] },
+    { key:'temperature',    label:'Temperature',    unit:'°C',   icon:Thermometer, color:'#f97316', bg:'rgba(249,115,22,0.08)', border:'rgba(249,115,22,0.2)', normal:v=>parseFloat(v)>=36&&parseFloat(v)<=37.5, alias:['temperature_c', 'temp'] },
+    { key:'spo2',           label:'Blood Oxygen',   unit:'%',    icon:Droplet,     color:'#3b82f6', bg:'rgba(59,130,246,0.08)', border:'rgba(59,130,246,0.2)', normal:v=>v>=95, alias:['oxygen'] },
+    { key:'blood_pressure', label:'Blood Pressure', unit:'mmHg', icon:Gauge,       color:'#8b5cf6', bg:'rgba(139,92,246,0.08)', border:'rgba(139,92,246,0.2)', normal:()=>true, alias:['bp'] },
 ]
 
 export default function DeviceMonitor() {
@@ -76,6 +76,54 @@ export default function DeviceMonitor() {
     }, [device, isSimulating])
 
     // ── Network Scanner Logic (Frontend Discovery) ───────────────────────────
+    // ── Local Polling (Direct from Hardware) ────────────────────────────────
+    const pollHardware = useCallback(async (ip) => {
+        try {
+            const res = await fetch(`http://${ip}/`, { 
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            })
+            const rawData = await res.json()
+            
+            // Map keys from Arduino (e.g., temperature_c -> temperature)
+            const mappedData = { ...rawData, recorded_at: new Date().toISOString() }
+            
+            VITALS.forEach(v => {
+                if (rawData[v.key] !== undefined) return
+                const alias = v.alias?.find(a => rawData[a] !== undefined)
+                if (alias) mappedData[v.key] = rawData[alias]
+            })
+
+            setVitals(mappedData)
+            setConnStatus('live')
+            setPulse(true)
+            setTimeout(() => setPulse(false), 600)
+            setHistory(prev => [mappedData, ...prev].slice(0, 10))
+            
+            // Push to Supabase optionally for record keeping
+            supabase.from('device_readings').insert({
+                device_id: device.device_id,
+                heart_rate: mappedData.heart_rate,
+                temperature: mappedData.temperature,
+                recorded_at: mappedData.recorded_at
+            }).then(() => {})
+
+        } catch (e) {
+            console.warn('Poll failed:', e)
+            if (e.message.includes('Failed to fetch')) {
+                setConnStatus('blocked')
+                setError('Browser blocked direct retrieval. Please "Allow Insecure Content" in Site Settings.')
+            }
+        }
+    }, [device])
+
+    useEffect(() => {
+        if (!foundIp || connStatus !== 'live') return
+        const timer = setInterval(() => pollHardware(foundIp), 3000)
+        return () => clearInterval(timer)
+    }, [foundIp, connStatus, pollHardware])
+
+    // ── Network Scanner Logic (Discovery) ────────────────────────────────
     const scanLocalNetwork = async () => {
         if (scanRef.current) return
         scanRef.current = true
@@ -83,8 +131,8 @@ export default function DeviceMonitor() {
         setScanProgress(0)
         setError('')
 
-        // Common subnets
-        const subnets = ['192.168.1', '192.168.0', '10.54.100', '10.0.0']
+        // Common subnets to check
+        const subnets = ['10.54.100', '192.168.1', '192.168.0', '10.0.0']
         let detected = false
 
         for (const subnet of subnets) {
@@ -100,22 +148,23 @@ export default function DeviceMonitor() {
                         probe.onload = () => resolve(true)
                         probe.onerror = () => reject(false)
                         probe.src = `http://${ip}/favicon.ico?t=${Date.now()}` 
-                        setTimeout(() => reject(false), 300) 
+                        setTimeout(() => reject(false), 200) 
                     })
 
                     await probePromise
+                    console.log(`✅ Signal found at: ${ip}`)
                     setFoundIp(ip)
-                    detected = true
                     setConnStatus('live')
+                    detected = true
+                    pollHardware(ip) // Trigger first poll immediately
                     break
-                } catch (e) {
-                    // Continue
-                }
+                } catch (e) { /* next */ }
             }
         }
 
         if (!detected && connStatus !== 'live') {
-            setConnStatus('idle') // Return to idle if not found
+            setConnStatus('idle')
+            setError('Device not found. Verify it is on the same Wi-Fi.')
         }
         scanRef.current = false
     }
