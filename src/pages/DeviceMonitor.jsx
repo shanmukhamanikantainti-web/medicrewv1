@@ -131,7 +131,22 @@ export default function DeviceMonitor() {
         setScanProgress(0)
         setError('')
 
-        // Priority subnets (targeted to your specific hardware network)
+        // 1. TRY FIXED HARDWARE IP FIRST (User Request)
+        const fixedIp = '10.249.96.170'
+        try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 200)
+            await fetch(`http://${fixedIp}/`, { mode: 'no-cors', signal: controller.signal })
+            clearTimeout(timeoutId)
+            console.log(`🚀 Locked to fixed hardware IP: ${fixedIp}`)
+            setFoundIp(fixedIp)
+            setConnStatus('live')
+            pollHardware(fixedIp)
+            scanRef.current = false
+            return 
+        } catch (e) { /* Fallback to scan if fixed IP is down */ }
+
+        // 2. FALLBACK SCAN (If fixed IP not found)
         const subnets = ['10.249.96', '10.54.96', '10.54.100', '192.168.1', '192.168.0']
         let detected = false
 
