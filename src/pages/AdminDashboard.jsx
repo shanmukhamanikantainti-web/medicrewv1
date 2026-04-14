@@ -28,37 +28,43 @@ export default function AdminDashboard() {
         <div className="dashboard-layout">
             <Sidebar />
             <main className="main-content">
-                <div className="page-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Shield size={24} color="#7c3aed" />
+                <header className="page-header">
+                    <div className="header-content">
+                        <div className="header-icon">
+                            <Shield size={24} />
                         </div>
-                        <div>
+                        <div className="header-text">
                             <h1 className="page-title">Admin Dashboard</h1>
-                            <p className="page-subtitle">System governance and management — all actions are audit logged</p>
+                            <p className="page-subtitle">Centralized system governance and audit-logged operations</p>
                         </div>
                     </div>
-                </div>
-                <div className="page-content">
-                    <div className="tabs">
-                        {TABS.map(t => (
-                            <button
-                                key={t.id}
-                                className={`tab-btn ${tab === t.id ? 'active' : ''}`}
-                                onClick={() => setTab(t.id)}
-                                id={`admin-tab-${t.id}`}
-                            >
-                                <t.icon size={16} /> {t.label}
-                            </button>
-                        ))}
-                    </div>
+                </header>
 
-                    {tab === 'users' && <UsersTab adminId={user?.id} />}
-                    {tab === 'doctors' && <DoctorsTab adminId={user?.id} />}
-                    {tab === 'devices' && <DevicesTab adminId={user?.id} />}
-                    {tab === 'appointments' && <AppointmentsTab />}
-                    {tab === 'admins' && <AdminsTab adminId={user?.id} isSuperAdmin={isSuperAdmin} />}
-                    {tab === 'audit' && <AuditTab />}
+                <div className="page-content">
+                    <nav className="tabs-container glass-panel">
+                        <div className="tabs">
+                            {TABS.map(t => (
+                                <button
+                                    key={t.id}
+                                    className={`tab-btn ${tab === t.id ? 'active' : ''}`}
+                                    onClick={() => setTab(t.id)}
+                                    id={`admin-tab-${t.id}`}
+                                >
+                                    <t.icon size={16} />
+                                    <span>{t.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+
+                    <div className="tab-pane-content">
+                        {tab === 'users' && <UsersTab adminId={user?.id} />}
+                        {tab === 'doctors' && <DoctorsTab adminId={user?.id} />}
+                        {tab === 'devices' && <DevicesTab adminId={user?.id} />}
+                        {tab === 'appointments' && <AppointmentsTab />}
+                        {tab === 'admins' && <AdminsTab adminId={user?.id} isSuperAdmin={isSuperAdmin} />}
+                        {tab === 'audit' && <AuditTab />}
+                    </div>
                 </div>
             </main>
         </div>
@@ -110,60 +116,93 @@ function UsersTab({ adminId }) {
     const roleColor = { patient: 'badge-blue', doctor: 'badge-green', admin: 'badge-orange', superadmin: 'badge-red' }
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>All Users <span className="badge badge-gray">{users.length}</span></h2>
-                <button className="btn btn-sm btn-outline" onClick={fetchUsers} disabled={loading}>
-                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh List
-                </button>
+        <div className="glass-panel section-container">
+            <div className="section-header">
+                <div className="section-header-text">
+                    <h2 className="section-title">Directory</h2>
+                    <p className="section-subtitle">Real-time user authorization and lifecycle management</p>
+                </div>
+                <div className="section-actions">
+                    <span className="badge badge-outline">{users.length} Total Users</span>
+                    <button className="btn btn-secondary btn-sm" onClick={fetchUsers} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                        <span>Sync</span>
+                    </button>
+                </div>
             </div>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : (
+
+            {loading ? (
+                <div className="loading-state">
+                    <RefreshCw size={24} className="spin" />
+                    <p>Securing connection...</p>
+                </div>
+            ) : (
                 <div className="table-wrapper">
-                    <table>
-                        <thead><tr><th>Name / Email</th><th>Role</th><th>Verified</th><th>Actions</th></tr></thead>
+                    <table className="ethereal-table">
+                        <thead>
+                            <tr>
+                                <th>Identity</th>
+                                <th>Access Level</th>
+                                <th>Validation</th>
+                                <th className="text-right">Governance</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {users.map(u => (
                                 <tr key={u.id}>
                                     <td>
-                                        <div style={{ fontWeight: 600 }}>{u.full_name || '—'}</div>
-                                        <div style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>{u.email}</div>
-                                    </td>
-                                    <td><span className={`badge ${roleColor[u.role] || 'badge-gray'}`}>{u.role}</span></td>
-                                    <td>
-                                        {u.verified
-                                            ? <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle size={11} /> Verified</span>
-                                            : <span className="badge badge-yellow" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={11} /> Pending</span>
-                                        }
+                                        <div className="user-identity">
+                                            <span className="user-name">{u.full_name || 'Anonymous User'}</span>
+                                            <span className="user-email">{u.email}</span>
+                                        </div>
                                     </td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <span className={`badge ${roleColor[u.role] || 'badge-gray'}`}>
+                                            {u.role.toUpperCase()}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {u.verified ? (
+                                            <span className="status-indicator status-online">
+                                                <CheckCircle size={12} /> Verified
+                                            </span>
+                                        ) : (
+                                            <span className="status-indicator status-offline">
+                                                <Clock size={12} /> Pending
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <div className="table-actions justify-end">
                                             {u.role !== 'superadmin' && (
                                                 <button
                                                     id={`verify-btn-${u.id}`}
-                                                    className="btn btn-sm"
-                                                    style={u.verified
-                                                        ? { background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
-                                                        : { background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }
-                                                    }
+                                                    className={`btn btn-sm ${u.verified ? 'btn-outline' : 'btn-primary'}`}
                                                     onClick={() => toggleVerify(u)}
                                                     disabled={actionLoading[u.id + '_verify']}
                                                 >
-                                                    {actionLoading[u.id + '_verify']
-                                                        ? <RefreshCw size={12} className="spin" />
-                                                        : u.verified ? <ShieldOff size={12} /> : <ShieldCheck size={12} />
-                                                    }
-                                                    {u.verified ? ' Unverify' : ' Verify'}
+                                                    {actionLoading[u.id + '_verify'] ? (
+                                                        <RefreshCw size={12} className="spin" />
+                                                    ) : u.verified ? (
+                                                        <ShieldOff size={12} />
+                                                    ) : (
+                                                        <ShieldCheck size={12} />
+                                                    )}
+                                                    {u.verified ? 'Suspend' : 'Validate'}
                                                 </button>
                                             )}
                                             {u.role !== 'superadmin' && (
                                                 <button
                                                     id={`delete-btn-${u.id}`}
-                                                    className="btn btn-sm btn-ghost"
-                                                    style={{ color: '#dc2626' }}
+                                                    className="btn btn-sm btn-ghost btn-danger"
                                                     onClick={() => deleteUser(u.id, u.email)}
                                                     disabled={actionLoading[u.id + '_delete']}
                                                 >
-                                                    {actionLoading[u.id + '_delete'] ? <RefreshCw size={12} className="spin" /> : <Trash2 size={13} />} Delete
+                                                    {actionLoading[u.id + '_delete'] ? (
+                                                        <RefreshCw size={12} className="spin" />
+                                                    ) : (
+                                                        <Trash2 size={13} />
+                                                    )}
                                                 </button>
                                             )}
                                         </div>
@@ -208,39 +247,77 @@ function DoctorsTab({ adminId }) {
     }
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>Doctor Management <span className="badge badge-gray">{doctors.length}</span></h2>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button className="btn btn-sm btn-outline" onClick={fetchDoctors} disabled={loading}>
-                        <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+        <div className="glass-panel section-container">
+            <div className="section-header">
+                <div className="section-header-text">
+                    <h2 className="section-title">Clinical Personnel</h2>
+                    <p className="section-subtitle">Credential verification and medical staff onboarding</p>
+                </div>
+                <div className="section-actions">
+                    <button className="btn btn-secondary btn-sm" onClick={fetchDoctors} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
-                    <button className="btn btn-sm btn-primary" onClick={() => setShowAddModal(true)}>
-                        <UserPlus size={14} /> Add Doctor
+                    <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
+                        <UserPlus size={14} />
+                        <span>Appoint Doctor</span>
                     </button>
                 </div>
             </div>
 
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : doctors.length === 0 ? (
-                <div className="card empty-state"><Stethoscope size={40} style={{ color: 'var(--gray-300)' }} /><h3>No Doctors</h3></div>
+            {loading ? (
+                <div className="loading-state">
+                    <RefreshCw size={24} className="spin" />
+                </div>
+            ) : doctors.length === 0 ? (
+                <div className="empty-state">
+                    <Stethoscope size={40} />
+                    <h3>No Practitioners Found</h3>
+                    <p>Onboard qualified medical staff to begin operations.</p>
+                </div>
             ) : (
                 <div className="table-wrapper">
-                    <table>
-                        <thead><tr><th>Doctor</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+                    <table className="ethereal-table">
+                        <thead>
+                            <tr>
+                                <th>Practitioner</th>
+                                <th>Credentials</th>
+                                <th>Status</th>
+                                <th className="text-right">Actions</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {doctors.map(d => (
                                 <tr key={d.id}>
-                                    <td style={{ fontWeight: 600 }}>{d.full_name || '—'}</td>
-                                    <td style={{ color: 'var(--gray-500)' }}>{d.email}</td>
                                     <td>
-                                        {d.verified
-                                            ? <span className="badge badge-green"><CheckCircle size={11} /> Approved</span>
-                                            : <span className="badge badge-yellow"><Clock size={11} /> Pending</span>}
+                                        <div className="user-identity">
+                                            <span className="user-name">{d.full_name || 'Dr. Unknown'}</span>
+                                            <span className="user-email">{d.email}</span>
+                                        </div>
+                                    </td>
+                                    <td>Medical Degree Verified</td>
+                                    <td>
+                                        {d.verified ? (
+                                            <span className="badge badge-green">Validated</span>
+                                        ) : (
+                                            <span className="badge badge-yellow">Under Review</span>
+                                        )}
                                     </td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {!d.verified && <button className="btn btn-sm" style={{ background: '#dcfce7', color: '#16a34a' }} onClick={() => approve(d.id, d.email)}><CheckCircle size={13} /> Approve</button>}
-                                            <button className="btn btn-sm btn-danger" onClick={() => reject(d.id, d.email)}><XCircle size={13} /> Reject</button>
+                                        <div className="table-actions justify-end">
+                                            {!d.verified && (
+                                                <button
+                                                    className="btn btn-sm btn-primary"
+                                                    onClick={() => approve(d.id, d.email)}
+                                                >
+                                                    Approve
+                                                </button>
+                                            )}
+                                            <button
+                                                className="btn btn-sm btn-ghost btn-danger"
+                                                onClick={() => reject(d.id, d.email)}
+                                            >
+                                                <XCircle size={14} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -291,32 +368,41 @@ function AddDoctorModal({ onClose, onAdded, adminId }) {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal glass-panel glass-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3 className="modal-title">Add New Doctor</h3>
-                    <button className="btn btn-sm btn-ghost" onClick={onClose}><XCircle size={18} /></button>
-                </div>
-                <p style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
-                    Promote an existing user to doctor status by their email.
-                </p>
-                <form onSubmit={handleAdd} className="form-group">
-                    <label className="form-label">User Email Address</label>
-                    <input
-                        type="email"
-                        className="form-input"
-                        placeholder="doctor@example.com"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        required
-                    />
-                    {error && <div style={{ color: '#dc2626', fontSize: '0.8125rem', marginTop: '0.5rem' }}>{error}</div>}
-                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-                        <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-                        <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
-                            {submitting ? 'Adding...' : 'Add Doctor'}
-                        </button>
+                    <div className="modal-title-group">
+                        <UserPlus className="modal-icon" />
+                        <h3 className="modal-title">Elevate to Practitioner</h3>
                     </div>
-                </form>
+                    <button className="close-btn" onClick={onClose}><XCircle size={20} /></button>
+                </div>
+                <div className="modal-body">
+                    <p className="modal-description">
+                        Upgrade an existing user to doctor status. This grants them clinical management permissions.
+                    </p>
+                    <form onSubmit={handleAdd} className="modal-form">
+                        <div className="form-group">
+                            <label className="form-label">Search Identity by Email</label>
+                            <div className="input-group">
+                                <input
+                                    type="email"
+                                    className="form-input"
+                                    placeholder="doctor@medicrew.ai"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            {error && <div className="form-error">{error}</div>}
+                        </div>
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-ghost" onClick={onClose}>Dismiss</button>
+                            <button type="submit" className="btn btn-primary" disabled={submitting}>
+                                {submitting ? <RefreshCw size={14} className="spin" /> : 'Confirm Elevation'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     )
@@ -351,30 +437,82 @@ function DevicesTab({ adminId }) {
     }
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>Device Management <span className="badge badge-gray">{devices.length}</span></h2>
-                <button className="btn btn-sm btn-outline" onClick={fetchDevices} disabled={loading}>
-                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
-                </button>
+        <div className="glass-panel section-container">
+            <div className="section-header">
+                <div className="section-header-text">
+                    <h2 className="section-title">Telemetry Nodes</h2>
+                    <p className="section-subtitle">Infrastructure monitoring and terminal deployment status</p>
+                </div>
+                <div className="section-actions">
+                    <button className="btn btn-secondary btn-sm" onClick={fetchDevices} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                    </button>
+                </div>
             </div>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : devices.length === 0 ? (
-                <div className="card empty-state"><Cpu size={40} style={{ color: 'var(--gray-300)' }} /><h3>No Devices</h3></div>
+
+            {loading ? (
+                <div className="loading-state">
+                    <RefreshCw size={24} className="spin" />
+                </div>
+            ) : devices.length === 0 ? (
+                <div className="empty-state">
+                    <Cpu size={40} />
+                    <h3>No Active Nodes</h3>
+                    <p>Register hardware terminals to begin telemetry ingestion.</p>
+                </div>
             ) : (
                 <div className="table-wrapper">
-                    <table>
-                        <thead><tr><th>Device ID</th><th>Linked Patient</th><th>Status</th><th>Last Sync</th><th>Actions</th></tr></thead>
+                    <table className="ethereal-table">
+                        <thead>
+                            <tr>
+                                <th>Terminal ID</th>
+                                <th>Assigned Link</th>
+                                <th>Relay Status</th>
+                                <th>Last Pulse</th>
+                                <th className="text-right">Overrides</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {devices.map(dev => (
                                 <tr key={dev.id}>
-                                    <td style={{ fontWeight: 700, fontFamily: 'monospace' }}>{dev.device_id}</td>
-                                    <td>{dev.patient?.full_name || dev.patient?.email || <span style={{ color: 'var(--gray-400)' }}>Unlinked</span>}</td>
-                                    <td><span className={`badge ${dev.status === 'active' ? 'badge-green' : 'badge-gray'}`}>{dev.status}</span></td>
-                                    <td style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>{dev.last_sync ? new Date(dev.last_sync).toLocaleString() : '—'}</td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button className="btn btn-sm btn-outline" onClick={() => toggle(dev)}>{dev.status === 'active' ? 'Deactivate' : 'Activate'}</button>
-                                            {dev.patient_id && <button className="btn btn-sm btn-ghost" style={{ color: '#dc2626' }} onClick={() => unbind(dev)}>Unbind</button>}
+                                        <code className="terminal-code">{dev.device_id}</code>
+                                    </td>
+                                    <td>
+                                        {dev.patient?.full_name || dev.patient?.email ? (
+                                            <div className="user-identity">
+                                                <span className="user-name">{dev.patient.full_name}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="status-offline">Offline / Unbound</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <span className={`status-indicator ${dev.status === 'active' ? 'status-online' : 'status-offline'}`}>
+                                            {dev.status === 'active' ? 'Broadcasting' : 'Standby'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span className="timestamp">
+                                            {dev.last_sync ? new Date(dev.last_sync).toLocaleTimeString() : 'Infinite'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="table-actions justify-end">
+                                            <button
+                                                className={`btn btn-sm ${dev.status === 'active' ? 'btn-outline' : 'btn-secondary'}`}
+                                                onClick={() => toggle(dev)}
+                                            >
+                                                {dev.status === 'active' ? 'Deactivate' : 'Activate'}
+                                            </button>
+                                            {dev.patient_id && (
+                                                <button
+                                                    className="btn btn-sm btn-ghost btn-danger"
+                                                    onClick={() => unbind(dev)}
+                                                >
+                                                    Release
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -405,25 +543,60 @@ function AppointmentsTab() {
     const statusBadge = { pending: 'badge-yellow', confirmed: 'badge-green', cancelled: 'badge-red', completed: 'badge-gray' }
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>All Appointments <span className="badge badge-gray">{appts.length}</span></h2>
-                <button className="btn btn-sm btn-outline" onClick={fetchAppts} disabled={loading}>
-                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
-                </button>
+        <div className="glass-panel section-container">
+            <div className="section-header">
+                <div className="section-header-text">
+                    <h2 className="section-title">Clinical Encounters</h2>
+                    <p className="section-subtitle">System-wide appointment synchronization and patient schedules</p>
+                </div>
+                <div className="section-actions">
+                    <button className="btn btn-secondary btn-sm" onClick={fetchAppts} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                    </button>
+                </div>
             </div>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : (
+
+            {loading ? (
+                <div className="loading-state">
+                    <RefreshCw size={24} className="spin" />
+                </div>
+            ) : (
                 <div className="table-wrapper">
-                    <table>
-                        <thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Status</th><th>Notes</th></tr></thead>
+                    <table className="ethereal-table">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Practitioner</th>
+                                <th>Schedule</th>
+                                <th>Status</th>
+                                <th className="text-right">Manifest</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {appts.map(a => (
                                 <tr key={a.id}>
-                                    <td>{a.patient?.full_name || a.patient?.email || '—'}</td>
-                                    <td>{a.doctor?.full_name || 'Any'}</td>
-                                    <td>{a.date} {a.time ? `${a.time}` : ''}</td>
-                                    <td><span className={`badge ${statusBadge[a.status] || 'badge-gray'}`}>{a.status}</span></td>
-                                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--gray-500)' }}>{a.notes || '—'}</td>
+                                    <td>
+                                        <div className="user-identity">
+                                            <span className="user-name">{a.patient?.full_name || a.patient?.email}</span>
+                                        </div>
+                                    </td>
+                                    <td>{a.doctor?.full_name || 'Standard Routing'}</td>
+                                    <td>
+                                        <div className="schedule-cell">
+                                            <span className="date">{a.date}</span>
+                                            <span className="time">{a.time}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className={`badge ${statusBadge[a.status] || 'badge-gray'}`}>
+                                            {a.status.toUpperCase()}
+                                        </span>
+                                    </td>
+                                    <td className="text-right">
+                                        <span className="manifest-notes" title={a.notes}>
+                                            {a.notes || 'No supplemental data'}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -475,63 +648,122 @@ function AdminsTab({ adminId, isSuperAdmin }) {
     const tempAdmins = users.filter(u => u.role === 'admin' && u.temp_admin_expires_at)
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="admin-mgmt-container">
             {!isSuperAdmin && (
-                <div className="alert alert-warning"><AlertCircle size={15} style={{ flexShrink: 0 }} />Only the SuperAdmin can grant or revoke admin roles.</div>
-            )}
-
-            {/* Grant */}
-            {isSuperAdmin && (
-                <div className="card">
-                    <div className="card-header"><div className="card-title">Grant Temporary Admin Access</div></div>
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                        <div className="form-group" style={{ flex: 2 }}>
-                            <label className="form-label">Select User</label>
-                            <select className="form-select" value={selected} onChange={e => setSelected(e.target.value)} id="admin-grant-select">
-                                <option value="">Choose a user...</option>
-                                {users.filter(u => u.role !== 'admin').map(u => <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>)}
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Duration (hours)</label>
-                            <input type="number" className="form-input" value={hours} min={1} max={168} onChange={e => setHours(Number(e.target.value))} style={{ width: 120 }} />
-                        </div>
-                        <button className="btn btn-primary" onClick={grantAdmin} disabled={!selected || granting} id="grant-admin-btn">
-                            <UserPlus size={16} /> {granting ? 'Granting...' : 'Grant Admin'}
-                        </button>
-                    </div>
+                <div className="alert alert-warning mb-6 glass-panel">
+                    <AlertCircle size={18} />
+                    <p>Elevated Governance required. Actions restricted to System Overlord.</p>
                 </div>
             )}
 
-            {/* Active temp admins */}
-            <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-                    <h2 className="section-title" style={{ margin: 0 }}>Active Temporary Admins</h2>
-                    <button className="btn btn-sm btn-outline" onClick={fetchAdmins} disabled={loading}>
-                        <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
-                    </button>
-                </div>
-                {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : tempAdmins.length === 0 ? (
-                    <div className="card empty-state" style={{ padding: '2rem' }}><Shield size={36} style={{ color: 'var(--gray-300)' }} /><h3>No Temporary Admins</h3></div>
-                ) : (
-                    <div className="table-wrapper">
-                        <table>
-                            <thead><tr><th>User</th><th>Email</th><th>Expires</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                {tempAdmins.map(u => (
-                                    <tr key={u.id}>
-                                        <td style={{ fontWeight: 600 }}>{u.full_name || '—'}</td>
-                                        <td>{u.email}</td>
-                                        <td>{new Date(u.temp_admin_expires_at).toLocaleString()}</td>
-                                        <td>
-                                            {isSuperAdmin && <button className="btn btn-sm btn-danger" onClick={() => revokeAdmin(u.id, u.email)}>Revoke</button>}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+            <div className="mgmt-grid">
+                {/* Grant */}
+                {isSuperAdmin && (
+                    <div className="glass-panel mgmt-card">
+                        <div className="card-header">
+                            <h3 className="card-title">Interim Permission Grant</h3>
+                            <p className="card-subtitle">Authorize temporal administrative access to selected nodes</p>
+                        </div>
+                        <div className="mgmt-form">
+                            <div className="form-group">
+                                <label className="form-label">Target Identity</label>
+                                <select className="form-select" value={selected} onChange={e => setSelected(e.target.value)}>
+                                    <option value="">Query identity...</option>
+                                    {users.filter(u => u.role !== 'admin').map(u => (
+                                        <option key={u.id} value={u.id}>
+                                            {u.full_name || u.email} — [{u.role.toUpperCase()}]
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Temporal Window (Hours)</label>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        value={hours}
+                                        min={1}
+                                        max={168}
+                                        onChange={e => setHours(Number(e.target.value))}
+                                    />
+                                </div>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={grantAdmin}
+                                    disabled={!selected || granting}
+                                >
+                                    <Shield size={16} />
+                                    <span>{granting ? 'Granting...' : 'Authorize'}</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
+
+                {/* Active temp admins */}
+                <div className="glass-panel mgmt-card">
+                    <div className="section-header">
+                        <div className="section-header-text">
+                            <h2 className="section-title">Temporal Administrators</h2>
+                            <p className="section-subtitle">Active nodes with provisional oversight permissions</p>
+                        </div>
+                        <button className="btn btn-secondary btn-sm" onClick={fetchAdmins} disabled={loading}>
+                            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                        </button>
+                    </div>
+
+                    {loading ? (
+                        <div className="loading-state">
+                            <RefreshCw size={24} className="spin" />
+                        </div>
+                    ) : tempAdmins.length === 0 ? (
+                        <div className="empty-state">
+                            <Shield size={36} />
+                            <h3>No Active Overlays</h3>
+                            <p>All administrative roles are currently static.</p>
+                        </div>
+                    ) : (
+                        <div className="table-wrapper">
+                            <table className="ethereal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Identity</th>
+                                        <th>Expiration</th>
+                                        <th className="text-right">Oversight</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tempAdmins.map(u => (
+                                        <tr key={u.id}>
+                                            <td>
+                                                <div className="user-identity">
+                                                    <span className="user-name">{u.full_name || 'System Entity'}</span>
+                                                    <span className="user-email">{u.email}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="timestamp">
+                                                    {new Date(u.temp_admin_expires_at).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="text-right">
+                                                {isSuperAdmin && (
+                                                    <button
+                                                        className="btn btn-sm btn-ghost btn-danger"
+                                                        onClick={() => revokeAdmin(u.id, u.email)}
+                                                    >
+                                                        Revoke
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
@@ -553,25 +785,55 @@ function AuditTab() {
     }, [])
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>Audit Logs <span className="badge badge-gray">{logs.length}</span></h2>
-                <button className="btn btn-sm btn-outline" onClick={fetchLogs} disabled={loading}>
-                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
-                </button>
+        <div className="glass-panel section-container">
+            <div className="section-header">
+                <div className="section-header-text">
+                    <h2 className="section-title">Audit Log</h2>
+                    <p className="section-subtitle">Immutable record of high-privilege system modifications</p>
+                </div>
+                <div className="section-actions">
+                    <button className="btn btn-secondary btn-sm" onClick={fetchLogs} disabled={loading}>
+                        <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                    </button>
+                </div>
             </div>
-            {loading ? <div style={{ color: 'var(--gray-400)', padding: '2rem', textAlign: 'center' }}><RefreshCw size={24} className="spin" /></div> : logs.length === 0 ? (
-                <div className="card empty-state"><ClipboardList size={40} style={{ color: 'var(--gray-300)' }} /><h3>No Logs Yet</h3><p>Admin actions will appear here</p></div>
+
+            {loading ? (
+                <div className="loading-state">
+                    <RefreshCw size={24} className="spin" />
+                </div>
+            ) : logs.length === 0 ? (
+                <div className="empty-state">
+                    <ClipboardList size={40} />
+                    <h3>No Operations Logged</h3>
+                    <p>System actions will be recorded here for security compliance.</p>
+                </div>
             ) : (
                 <div className="table-wrapper">
-                    <table>
-                        <thead><tr><th>Admin</th><th>Action</th><th>Timestamp</th></tr></thead>
+                    <table className="ethereal-table">
+                        <thead>
+                            <tr>
+                                <th>Administrator</th>
+                                <th>Operation</th>
+                                <th className="text-right">Timestamp</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {logs.map(l => (
                                 <tr key={l.id}>
-                                    <td style={{ fontWeight: 600 }}>{l.admin?.full_name || l.admin?.email || 'System'}</td>
-                                    <td>{l.action}</td>
-                                    <td style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>{new Date(l.created_at).toLocaleString()}</td>
+                                    <td>
+                                        <div className="user-identity">
+                                            <span className="user-name">{l.admin?.full_name || l.admin?.email || 'System'}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className="audit-action">{l.action}</span>
+                                    </td>
+                                    <td className="text-right">
+                                        <span className="timestamp">
+                                            {new Date(l.created_at).toLocaleString()}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

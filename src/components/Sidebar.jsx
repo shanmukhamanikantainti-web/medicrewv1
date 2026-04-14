@@ -3,18 +3,32 @@ import { useAuth } from '../context/AuthContext'
 import {
     Activity, Brain, Cpu, Calendar, LayoutDashboard,
     Users, UserCheck, Server, ClipboardList, Shield,
-    LogOut, Heart, Stethoscope
+    LogOut, Heart, Stethoscope, ChevronRight, Settings
 } from 'lucide-react'
 
 function SidebarLogo() {
     return (
         <div className="sidebar-logo">
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                <rect width="32" height="32" rx="8" fill="#2563EB" />
-                <path d="M16 6v20M6 16h20" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                <circle cx="16" cy="16" r="4" fill="white" fillOpacity="0.35" />
-            </svg>
-            MediCrew
+            <div style={{ position: 'relative', width: 34, height: 34 }}>
+                <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
+                    <rect width="40" height="40" rx="12" fill="url(#logo-grad)" />
+                    <path d="M20 10v20M10 20h20" stroke="white" strokeWidth="3.5" strokeLinecap="round" />
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#2563EB" />
+                            <stop offset="1" stopColor="#1D4ED8" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: 12,
+                    boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.4)',
+                    pointerEvents: 'none'
+                }} />
+            </div>
+            <span>Medicrew</span>
         </div>
     )
 }
@@ -50,7 +64,7 @@ export default function Sidebar() {
     const initials = (profile?.full_name || profile?.email || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
     return (
-        <aside className="sidebar">
+        <aside className="sidebar animate-fade">
             <SidebarLogo />
             <nav className="sidebar-nav">
                 {navItems.map(({ to, label, icon: Icon, end }) => (
@@ -61,8 +75,11 @@ export default function Sidebar() {
                         className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
                         id={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
                     >
-                        <Icon size={19} />
-                        {label}
+                        <div className="sidebar-icon-container">
+                            <Icon size={20} />
+                        </div>
+                        <span style={{ flex: 1 }}>{label}</span>
+                        <ChevronRight size={14} className="chevron" style={{ opacity: 0.3 }} />
                     </NavLink>
                 ))}
             </nav>
@@ -72,13 +89,13 @@ export default function Sidebar() {
                     <div className="sidebar-user-info">
                         <div className="sidebar-user-name">{profile?.full_name || profile?.email}</div>
                         <div className="sidebar-user-role">
-                            <RoleIcon size={11} style={{ display: 'inline', marginRight: 3 }} />
+                            <RoleIcon size={12} />
                             {role}
                         </div>
                     </div>
                 </div>
-                <button onClick={handleSignOut} className="sidebar-link" id="sign-out-btn" style={{ color: '#dc2626', marginTop: '0.25rem' }}>
-                    <LogOut size={17} /> Sign Out
+                <button onClick={handleSignOut} className="sidebar-link" id="sign-out-btn" style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
+                    <LogOut size={20} /> <span>Sign Out</span>
                 </button>
             </div>
         </aside>

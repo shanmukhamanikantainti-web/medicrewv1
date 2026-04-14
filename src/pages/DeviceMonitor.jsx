@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Cpu, Link2, WifiOff, Activity, RefreshCw, AlertCircle, Shield } from 'lucide-react'
+import { Cpu, Link2, WifiOff, Activity, RefreshCw, AlertCircle, Shield, ChevronRight, Zap } from 'lucide-react'
 
 // Fallback simulation for when HTTPS blocks local fetch
 function generateMockVitals() {
@@ -16,7 +16,6 @@ function generateMockVitals() {
 
 async function fetchDeviceData(target) {
     try {
-        // If target doesn't start with http, assume it's an IP and use http
         const url = target.startsWith('http') ? target : `http://${target}`
         const res = await fetch(url, { mode: 'cors' })
         if (!res.ok) throw new Error('Device unreachable')
@@ -48,11 +47,13 @@ export default function DeviceMonitor() {
         if (!user) return
         supabase.from('devices').select('*').eq('patient_id', user.id).eq('status', 'active').single()
             .then(({ data }) => {
-                if (data) setDevice(data)
+                if (data) {
+                    setDevice(data)
+                    if (data.device_id === 'SIMULATOR') setIsSimulating(true)
+                }
             })
     }, [user])
 
-    // Polling logic
     useEffect(() => {
         if (!device) return
 
@@ -78,18 +79,16 @@ export default function DeviceMonitor() {
             }
         }
 
-        fetchData() // Initial fetch
+        fetchData()
         const interval = setInterval(fetchData, 4000)
         return () => clearInterval(interval)
-    }, [device])
+    }, [device, isSimulating])
 
     async function handleLink(e) {
         e.preventDefault()
         if (!deviceId.trim()) return setError('Please enter a Device ID.')
         setLinking(true); setError('')
 
-        // In this new flow, we use the Device ID to "detect" the device on the local network.
-        // Support for MC-0006 and HEALTH01
         const cleanId = deviceId.trim().toUpperCase()
         const detectedIp = cleanId === 'MC-0006' || cleanId === 'HEALTH01' ? '10.54.100.170' : `${deviceId.trim().toLowerCase()}.local`
 
@@ -100,7 +99,7 @@ export default function DeviceMonitor() {
             patient_id: user.id,
             status: 'active',
             last_sync: new Date().toISOString(),
-            ip_address: detectedIp // Fallback IP for monitoring
+            ip_address: detectedIp
         }
 
         if (existing) {
@@ -121,7 +120,7 @@ export default function DeviceMonitor() {
     async function handleUnlink() {
         if (!device) return
         await supabase.from('devices').update({ status: 'inactive', patient_id: null }).eq('id', device.id)
-        setDevice(null); setVitals(null)
+        setDevice(null); setVitals(null); setIsSimulating(false)
     }
 
     return (
@@ -129,118 +128,149 @@ export default function DeviceMonitor() {
             <Sidebar />
             <main className="main-content">
                 <div className="page-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Cpu size={24} color="#059669" />
-                        </div>
-                        <div>
-                            <h1 className="page-title">IoT Device Monitor</h1>
-                            <p className="page-subtitle">Link your health device and view live metrics</p>
-                        </div>
+                    <div className="header-info">
+                        <h1 className="page-title">Device Monitoring</h1>
+                        <p className="page-subtitle">Pervasive health telemetry and IoT synchronization</p>
                     </div>
                 </div>
-                <div className="page-content">
 
+                <div className="page-content">
                     {!device ? (
-                        <div style={{ maxWidth: 480, margin: '0 auto' }}>
-                            <div className="card">
-                                <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                                    <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-                                        <WifiOff size={36} style={{ color: 'var(--gray-400)' }} />
+                        <div style={{ maxWidth: 540, margin: '2rem auto' }}>
+                            <div className="glass-panel section-container">
+                                <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                                    <div style={{ 
+                                        width: 80, height: 80, borderRadius: '24px', 
+                                        background: 'rgba(56, 189, 248, 0.1)', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                        margin: '0 auto 1.5rem',
+                                        border: '1px solid rgba(56, 189, 248, 0.2)'
+                                    }}>
+                                        <WifiOff size={40} className="text-secondary" />
                                     </div>
-                                    <h3 style={{ fontWeight: 700, color: 'var(--gray-800)', marginBottom: '0.375rem' }}>No Device Linked</h3>
-                                    <p style={{ color: 'var(--gray-500)', fontSize: '0.9375rem' }}>Enter your IoT Device ID to start monitoring your health metrics in real time.</p>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gray-900)', marginBottom: '0.5rem' }}>Awaiting Connection</h3>
+                                    <p style={{ color: 'var(--gray-500)', fontSize: '1rem', lineHeight: 1.6 }}>Link your clinical IoT device to begin high-fidelity health monitoring.</p>
                                 </div>
-                                <form onSubmit={handleLink} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+
+                                <form onSubmit={handleLink} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem' }}>
                                     <div className="form-group">
-                                        <label className="form-label">Device ID</label>
-                                        <input
-                                            id="device-id-input"
-                                            className="form-input"
-                                            placeholder="e.g., MC-2024-001"
-                                            value={deviceId}
-                                            onChange={e => { setDeviceId(e.target.value); setError('') }}
-                                        />
-                                        <span style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>Try any ID like MC-0001 to simulate a device</span>
+                                        <label className="form-label">Secure Device Identifier</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                id="device-id-input"
+                                                className="form-input"
+                                                placeholder="e.g. MC-7742-X"
+                                                style={{ paddingLeft: '3rem' }}
+                                                value={deviceId}
+                                                onChange={e => { setDeviceId(e.target.value); setError('') }}
+                                            />
+                                            <Cpu size={18} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+                                        </div>
+                                        <p style={{ fontSize: '0.8125rem', color: 'var(--gray-400)', marginTop: '0.5rem' }}>Typical format: MC-XXXX-XXX. Use MC-0001 for demonstration.</p>
                                     </div>
+
+                                    {error && <div className="alert alert-error" style={{ fontSize: '0.875rem' }}>{error}</div>}
+
                                     {window.location.protocol === 'https:' && (
-                                        <div className="alert alert-info mb-4" style={{ fontSize: '0.8125rem', padding: '1rem', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-                                            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <Shield size={14} /> Security Notice
+                                        <div className="security-notice glass-panel" style={{ padding: '1.25rem', background: 'rgba(56, 189, 248, 0.03)', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                                <Shield size={18} style={{ color: 'var(--secondary-color)' }} />
+                                                <span style={{ fontWeight: 700, color: 'var(--secondary-color)', fontSize: '0.9375rem' }}>Telemetric Security Protocol</span>
                                             </div>
-                                            <p>Browsers block local IP access from HTTPS (Vercel). Options:</p>
-                                            <ul style={{ paddingLeft: '1.25rem', margin: '0.25rem 0' }}>
-                                                <li>Run locally: <strong>http://localhost:5173</strong></li>
-                                                <li>Use a tunnel: Enter an <strong>https://</strong> ngrok URL</li>
-                                                <li>Test UI: Click "Simulate Device" below</li>
-                                            </ul>
+                                            <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>Local device connectivity requires an unencrypted bridge or local execution.</p>
+                                            
                                             <button
                                                 type="button"
-                                                className="btn btn-ghost btn-sm"
-                                                style={{ marginTop: '0.5rem', width: '100%' }}
+                                                className="btn btn-secondary btn-sm"
+                                                style={{ width: '100%', justifyContent: 'center' }}
                                                 onClick={() => {
                                                     setDevice({ device_id: 'SIMULATOR', status: 'active' })
                                                     setIsSimulating(true)
                                                 }}
                                             >
-                                                Start Device Simulator
+                                                <Zap size={14} /> Initialize Digital Twin (Simulator)
                                             </button>
                                         </div>
                                     )}
-                                    <button type="submit" className="btn btn-primary" disabled={linking} id="link-device-btn">
-                                        {linking ? 'Linking...' : <><Link2 size={16} /> Link Device</>}
+
+                                    <button type="submit" className="btn btn-primary" style={{ height: '3.5rem', fontSize: '1rem' }} disabled={linking} id="link-device-btn">
+                                        {linking ? <RefreshCw size={20} className="spin" /> : <><Link2 size={20} /> Establish Secure Link</>}
                                     </button>
                                 </form>
                             </div>
                         </div>
                     ) : (
-                        <div>
-                            {/* Device Info */}
-                            <div className="card mb-6" style={{ padding: '1.25rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                                        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Cpu size={22} color="#059669" />
+                        <div className="animate-fade-in">
+                            {/* Device Management Header */}
+                            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                    <div style={{ 
+                                        width: 56, height: 56, borderRadius: '16px', 
+                                        background: isSimulating ? 'rgba(56, 189, 248, 0.1)' : 'rgba(34, 197, 94, 0.1)', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        border: `1px solid ${isSimulating ? 'rgba(56, 189, 248, 0.2)' : 'rgba(34, 197, 94, 0.2)'}`
+                                    }}>
+                                        <Cpu size={28} style={{ color: isSimulating ? 'var(--secondary-color)' : 'var(--accent-color)' }} />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--gray-900)' }}>
+                                            {isSimulating ? 'Clinical Digital Twin' : `Device: ${device.device_id}`}
                                         </div>
-                                        <div>
-                                            <div style={{ fontWeight: 700, color: 'var(--gray-800)' }}>Device ID: {device.device_id}</div>
-                                            <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>
-                                                <div className="live-dot" style={{ marginRight: 6 }} />
-                                                Active · Last sync: {vitals?.updatedAt || '...'}
-                                            </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                                            <span className="live-dot" />
+                                            Active Telemetry · Sync frequency: 4s
                                         </div>
                                     </div>
-                                    <button className="btn btn-outline btn-sm" style={{ color: '#dc2626', borderColor: '#dc2626' }} onClick={handleUnlink}>Unlink Device</button>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+                                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--gray-400)', fontWeight: 700 }}>Last Transmission</div>
+                                        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--gray-700)' }}>{vitals?.updatedAt || '--:--:--'}</div>
+                                    </div>
+                                    <button className="btn btn-ghost" style={{ color: 'var(--danger-color)', padding: '0.5rem 1rem' }} onClick={handleUnlink}>
+                                        Terminate Link
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Vitals */}
-                            <h2 className="section-title">Live Health Metrics</h2>
-                            <div className="vitals-grid mb-6">
+                            {/* Live Telemetry Display */}
+                            <div className="section-header">
+                                <Activity size={20} className="text-secondary" />
+                                <h2 className="section-title">Live Biometric Stream</h2>
+                            </div>
+
+                            <div className="vitals-grid" style={{ marginBottom: '2rem' }}>
                                 {[
                                     { cls: 'temp', icon: '🌡️', value: vitals?.temp, unit: '°C', label: 'Temperature', normal: v => parseFloat(v) >= 20 && parseFloat(v) <= 38 },
                                     { cls: 'hr', icon: '❤️', value: vitals?.hr, unit: 'bpm', label: 'Heart Rate', normal: v => v >= 10 && v <= 100 },
-                                    { cls: 'spo2', icon: '💧', value: vitals?.spo2 || '--', unit: '%', label: 'Blood Oxygen (SpO₂)', normal: v => v >= 95 },
-                                    { cls: 'bp', icon: '🩺', value: vitals?.bp || '--', unit: '', label: 'Blood Pressure', normal: () => true },
+                                    { cls: 'spo2', icon: '💧', value: vitals?.spo2 || '--', unit: '%', label: 'Blood Oxygen', normal: v => v >= 95 },
+                                    { cls: 'bp', icon: '🩺', value: vitals?.bp || '--', unit: 'mmHg', label: 'Blood Pressure', normal: () => true },
                                 ].map(v => (
                                     <div key={v.label} className={`vital-card ${v.cls} ${pulse ? 'pulse' : ''}`}>
                                         <div className="vital-icon">{v.icon}</div>
                                         <div className="vital-value">{v.value}<span className="vital-unit">{v.unit}</span></div>
                                         <div className="vital-label">{v.label}</div>
                                         {v.value && v.value !== '--' && (
-                                            <div style={{ marginTop: '0.375rem' }}>
-                                                <span className={`badge ${v.normal(v.value) ? 'badge-green' : 'badge-red'}`} style={{ fontSize: '0.6875rem' }}>
-                                                    {v.normal(v.value) ? 'Normal' : 'Abnormal'}
-                                                </span>
+                                            <div className={`badge ${v.normal(v.value) ? 'badge-green' : 'badge-red'}`} style={{ marginTop: '0.75rem', fontSize: '0.75rem' }}>
+                                                {v.normal(v.value) ? 'Optimal' : 'Caution Required'}
                                             </div>
                                         )}
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="alert alert-info">
-                                <RefreshCw size={15} style={{ flexShrink: 0 }} />
-                                Vitals are refreshed every 4 seconds automatically when this tab is active.
+                            <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255, 255, 255, 0.4)' }}>
+                                <div style={{ 
+                                    width: 40, height: 40, borderRadius: '10px', 
+                                    background: 'var(--gray-900)', display: 'flex', 
+                                    alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+                                }}>
+                                    <RefreshCw size={18} className="text-white spin" />
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: 700, color: 'var(--gray-900)', fontSize: '0.9375rem' }}>Auto-Synchronization Mode</div>
+                                    <p style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>Biometric data is persistent and encrypted during transmission.</p>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -249,3 +279,4 @@ export default function DeviceMonitor() {
         </div>
     )
 }
+

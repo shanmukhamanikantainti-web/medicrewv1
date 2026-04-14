@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Medicrew | The Clinical Ethereal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#dad9df",
+                        "on-primary-fixed": "#001a41",
+                        "tertiary-container": "#2676c8",
+                        "surface-tint": "#005bc1",
+                        "background": "#faf8fe",
+                        "primary-fixed": "#d8e2ff",
+                        "primary": "#0058bc",
+                        "on-primary-container": "#fefcff",
+                        "outline-variant": "#c1c6d7",
+                        "inverse-on-surface": "#f1f0f5",
+                        "secondary-container": "#2170e4",
+                        "on-secondary-fixed": "#001a42",
+                        "surface": "#faf8fe",
+                        "primary-container": "#0070eb",
+                        "surface-bright": "#faf8fe",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#004883",
+                        "surface-container": "#eeedf3",
+                        "on-secondary-container": "#fefcff",
+                        "on-tertiary-container": "#fdfcff",
+                        "surface-variant": "#e3e2e7",
+                        "on-background": "#1a1b1f",
+                        "on-surface-variant": "#414755",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f4f3f8",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#d8e2ff",
+                        "tertiary": "#005da8",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "inverse-primary": "#adc6ff",
+                        "on-surface": "#1a1b1f",
+                        "surface-container-high": "#e9e7ed",
+                        "inverse-surface": "#2f3034",
+                        "on-tertiary-fixed": "#001c39",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#004395",
+                        "secondary": "#0058be",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#e3e2e7",
+                        "tertiary-fixed": "#d4e3ff",
+                        "tertiary-fixed-dim": "#a4c9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#004493",
+                        "outline": "#717786",
+                        "primary-fixed-dim": "#adc6ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .clinical-glow {
+            background: linear-gradient(135deg, #0058BC 0%, #0070EB 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(40px);
+        }
+        .tonal-transition {
+            transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/10">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-white/70 dark:bg-slate-950/70 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,88,188,0.06)]">
+<div class="flex justify-between items-center px-8 py-6 max-w-[1440px] mx-auto">
+<div class="text-2xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-50">Medicrew</div>
+<div class="hidden md:flex gap-10 font-['Inter'] font-medium tracking-tight">
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Platform</a>
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Sensors</a>
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Security</a>
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Science</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="bg-primary text-white px-6 py-2.5 rounded-full font-semibold hover:scale-105 transition-transform duration-300 active:opacity-80">Get Started</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="min-h-screen flex flex-col items-center justify-center pt-32 pb-20 px-6 text-center overflow-hidden">
+<div class="max-w-5xl mx-auto space-y-8">
+<span class="label-md uppercase tracking-[0.2em] text-primary font-bold text-xs">Pioneering Invisible Intelligence</span>
+<h1 class="text-6xl md:text-[5.5rem] font-extrabold leading-[1.05] tracking-tighter text-on-surface">
+            The Future of <br/>Patient Monitoring
+        </h1>
+<p class="text-xl md:text-2xl text-on-surface-variant font-light max-w-2xl mx-auto leading-relaxed">
+            Real-time vitals powered by IoT and AI. Precision healthcare that feels like absolute clarity.
+        </p>
+</div>
+<div class="mt-20 relative w-full max-w-6xl aspect-[16/9] mx-auto group">
+<div class="absolute inset-0 bg-primary/5 rounded-[3rem] blur-3xl -z-10 group-hover:bg-primary/10 transition-colors duration-700"></div>
+<div class="w-full h-full glass-panel rounded-[2.5rem] border border-outline-variant/10 shadow-2xl flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover scale-105 hover:scale-100 transition-transform duration-1000" data-alt="Modern medical dashboard UI with clean blue heart rate waves, minimalist data visualization, and soft glassmorphism effects" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw3W-6jduEP8g0fMXoTVJbFFZnINNfoo9wLeb3VUISIEAPo0WYOEQKx-8Q4aw4S21XwpH4yLZgjU_yAzw5pLplKH2YpXsPOnTN9fcMmCqxg1o1NPF-6SjkXZLZuSWvhaZt9kqrmJWuh2pyh3YQLgQZL9WgfJkhOW1EMyQzy-782jT6ChWZFDNOZAKgs6eAHzYze2DwU0Yiv7vXSIqBoJQytshir0Ng4ZAmE1Hw8MiYv_6ab0yuzNB_HNVqigqZTLDDC-RrTJ-Gqw"/>
+<!-- Floating Element Over Hero -->
+<div class="absolute bottom-12 right-12 glass-panel p-6 rounded-xl border border-white/20 shadow-xl max-w-xs text-left animate-pulse">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary" data-icon="favorite" data-weight="fill">favorite</span>
+<span class="text-xs font-bold uppercase tracking-widest text-primary">Live Pulse</span>
+</div>
+<div class="text-4xl font-extrabold tracking-tighter text-on-surface">72 BPM</div>
+<div class="h-1 w-full bg-surface-container-low rounded-full mt-4 overflow-hidden">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Built for Modern Healthcare -->
+<section class="py-40 px-8 max-w-[1440px] mx-auto grid md:grid-cols-2 gap-24 items-center">
+<div class="space-y-12">
+<div class="space-y-4">
+<h2 class="text-4xl md:text-5xl font-extrabold tracking-tighter">Built for Modern <br/>Healthcare</h2>
+<div class="h-1 w-20 bg-primary rounded-full"></div>
+</div>
+<div class="space-y-8">
+<div class="flex items-start gap-6 group">
+<div class="p-4 rounded-2xl bg-surface-container-low group-hover:bg-primary group-hover:text-white transition-colors duration-500">
+<span class="material-symbols-outlined text-2xl" data-icon="sensors">sensors</span>
+</div>
+<div>
+<h4 class="text-xl font-bold mb-2">Real-time monitoring</h4>
+<p class="text-on-surface-variant leading-relaxed">Continuous data streaming with sub-millisecond latency across secure clinical networks.</p>
+</div>
+</div>
+<div class="flex items-start gap-6 group">
+<div class="p-4 rounded-2xl bg-surface-container-low group-hover:bg-primary group-hover:text-white transition-colors duration-500">
+<span class="material-symbols-outlined text-2xl" data-icon="wifi_tethering">wifi_tethering</span>
+</div>
+<div>
+<h4 class="text-xl font-bold mb-2">Wireless IoT</h4>
+<p class="text-on-surface-variant leading-relaxed">Medical-grade wearable sensors that pair instantly and maintain persistent connection.</p>
+</div>
+</div>
+<div class="flex items-start gap-6 group">
+<div class="p-4 rounded-2xl bg-surface-container-low group-hover:bg-primary group-hover:text-white transition-colors duration-500">
+<span class="material-symbols-outlined text-2xl" data-icon="psychology">psychology</span>
+</div>
+<div>
+<h4 class="text-xl font-bold mb-2">AI insights</h4>
+<p class="text-on-surface-variant leading-relaxed">Proactive anomaly detection that alerts clinicians before critical events occur.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="relative">
+<div class="aspect-square rounded-[3rem] overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover" data-alt="Close up of a clean, minimalist medical sensor device on skin, emphasizing luxury design and high-tech materials" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyE98I9SDJu8jm_QwuaOYmrEjMSRPoVGERC7sUuI9BbPVVmSto8ltMEJftCN8Mn3_bMZjQ1t-g8pEfqgvYZyGcQ8mKmAMQrcuHc16rDznUsqWNjGNo6vAoNBnSDXDyo0_oQWQ_Nv7tXgDYhcqWY3csrWJAeSKWkjLvC3isz24uinDrYr695EaGN0sN9oxU5V65g3-7E4HhVwr8jeCBtaOnB_se54xViUfKvn9A-4q0yfKiLzQwJ94zQASVaHjWN4oRzKmUAEmKQA"/>
+</div>
+<div class="absolute -bottom-10 -left-10 glass-panel p-8 rounded-3xl shadow-2xl border border-white/30 hidden lg:block">
+<div class="text-xs uppercase tracking-widest text-on-surface-variant mb-4 font-bold">Reliability Score</div>
+<div class="text-5xl font-extrabold text-primary">99.9%</div>
+<div class="mt-2 text-sm font-medium">Clinical Uptime</div>
+</div>
+</div>
+</section>
+<!-- Live Vitals Section -->
+<section class="py-40 bg-surface-container-low overflow-hidden">
+<div class="max-w-[1440px] mx-auto px-8">
+<div class="text-center mb-24 space-y-4">
+<h2 class="text-5xl font-extrabold tracking-tighter">Live Clinical Vitals</h2>
+<p class="text-on-surface-variant">The pulse of your ward, centralized in one ethereal interface.</p>
+</div>
+<div class="relative min-h-[500px] flex items-center justify-center">
+<!-- Large Waveform Placeholder (Visual) -->
+<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-64 flex items-end justify-around gap-1 opacity-20 pointer-events-none">
+<div class="w-1 bg-primary h-1/4 rounded-full"></div>
+<div class="w-1 bg-primary h-1/2 rounded-full"></div>
+<div class="w-1 bg-primary h-3/4 rounded-full"></div>
+<div class="w-1 bg-primary h-full rounded-full"></div>
+<div class="w-1 bg-primary h-1/2 rounded-full"></div>
+<div class="w-1 bg-primary h-1/4 rounded-full"></div>
+<div class="w-1 bg-primary h-3/4 rounded-full"></div>
+<div class="w-1 bg-primary h-full rounded-full"></div>
+<div class="w-1 bg-primary h-1/2 rounded-full"></div>
+<div class="w-1 bg-primary h-1/4 rounded-full"></div>
+</div>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl">
+<!-- Card BP -->
+<div class="bg-surface-container-lowest p-10 rounded-[2rem] shadow-xl border border-outline-variant/10 hover:-translate-y-2 transition-transform duration-500">
+<div class="flex justify-between items-start mb-12">
+<span class="material-symbols-outlined text-red-500 bg-red-50 p-3 rounded-2xl" data-icon="speed">speed</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Optimal</span>
+</div>
+<div class="text-6xl font-extrabold tracking-tighter mb-2">120/80</div>
+<div class="text-on-surface-variant font-medium">Blood Pressure <span class="text-xs align-top">mmHg</span></div>
+</div>
+<!-- Card Temp -->
+<div class="bg-surface-container-lowest p-10 rounded-[2rem] shadow-xl border border-outline-variant/10 hover:-translate-y-2 transition-transform duration-500">
+<div class="flex justify-between items-start mb-12">
+<span class="material-symbols-outlined text-orange-500 bg-orange-50 p-3 rounded-2xl" data-icon="thermostat">thermostat</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Stable</span>
+</div>
+<div class="text-6xl font-extrabold tracking-tighter mb-2">36.8°C</div>
+<div class="text-on-surface-variant font-medium">Body Temperature</div>
+</div>
+<!-- Card O2 -->
+<div class="bg-surface-container-lowest p-10 rounded-[2rem] shadow-xl border border-outline-variant/10 hover:-translate-y-2 transition-transform duration-500">
+<div class="flex justify-between items-start mb-12">
+<span class="material-symbols-outlined text-blue-500 bg-blue-50 p-3 rounded-2xl" data-icon="air">air</span>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Healthy</span>
+</div>
+<div class="text-6xl font-extrabold tracking-tighter mb-2">99%</div>
+<div class="text-on-surface-variant font-medium">Oxygen Saturation</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- How it Works -->
+<section class="py-40 px-8 max-w-[1440px] mx-auto text-center">
+<h2 class="text-5xl font-extrabold tracking-tighter mb-24">Seamless Data Journey</h2>
+<div class="flex flex-col md:flex-row items-center justify-between gap-12 relative">
+<!-- Thin connecting line -->
+<div class="absolute top-1/2 left-0 w-full h-[1px] bg-outline-variant/20 -z-10 hidden md:block"></div>
+<div class="bg-white p-8 rounded-full border border-outline-variant/10 shadow-lg relative group">
+<span class="material-symbols-outlined text-4xl text-primary mb-4" data-icon="settings_input_antenna">settings_input_antenna</span>
+<p class="text-sm font-bold uppercase tracking-widest">Sensors</p>
+<div class="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-on-surface text-white text-[10px] py-1 px-3 rounded-full whitespace-nowrap">Step 1: Ingestion</div>
+</div>
+<div class="bg-white p-8 rounded-full border border-outline-variant/10 shadow-lg relative group">
+<span class="material-symbols-outlined text-4xl text-primary mb-4" data-icon="memory">memory</span>
+<p class="text-sm font-bold uppercase tracking-widest">ESP32</p>
+</div>
+<div class="bg-white p-8 rounded-full border border-outline-variant/10 shadow-lg relative group">
+<span class="material-symbols-outlined text-4xl text-primary mb-4" data-icon="cloud_done">cloud_done</span>
+<p class="text-sm font-bold uppercase tracking-widest">Cloud</p>
+</div>
+<div class="bg-white p-8 rounded-full border border-outline-variant/10 shadow-lg relative group">
+<span class="material-symbols-outlined text-4xl text-primary mb-4" data-icon="dashboard_customize">dashboard_customize</span>
+<p class="text-sm font-bold uppercase tracking-widest">Dashboard</p>
+</div>
+</div>
+</section>
+<!-- Designed for Everyone -->
+<section class="py-40 bg-surface">
+<div class="max-w-[1440px] mx-auto px-8 grid md:grid-cols-3 gap-8">
+<div class="p-12 space-y-6">
+<div class="text-primary-fixed-dim text-xs font-bold tracking-[0.2em] uppercase">For Patient</div>
+<h3 class="text-3xl font-extrabold tracking-tight">Comfort and assurance through invisible care.</h3>
+<p class="text-on-surface-variant leading-relaxed">No wires, no clutter, no stress. Just clinical-grade monitoring in a device that feels like part of you.</p>
+</div>
+<div class="p-12 space-y-6 bg-surface-container-low rounded-[2rem]">
+<div class="text-primary-fixed-dim text-xs font-bold tracking-[0.2em] uppercase">For Doctor</div>
+<h3 class="text-3xl font-extrabold tracking-tight">Actionable data, not just raw metrics.</h3>
+<p class="text-on-surface-variant leading-relaxed">Filter the noise. Medicrew surface the critical patient events that matter most to your rounds.</p>
+</div>
+<div class="p-12 space-y-6">
+<div class="text-primary-fixed-dim text-xs font-bold tracking-[0.2em] uppercase">For Admin</div>
+<h3 class="text-3xl font-extrabold tracking-tight">Scalable efficiency across any facility.</h3>
+<p class="text-on-surface-variant leading-relaxed">Manage thousands of endpoints from a single secure cloud console with enterprise-grade encryption.</p>
+</div>
+</div>
+</section>
+<!-- AI Assistant -->
+<section class="py-40 px-8 max-w-[1440px] mx-auto">
+<div class="glass-panel border border-outline-variant/10 rounded-[3rem] p-12 md:p-24 flex flex-col md:flex-row gap-20 items-center">
+<div class="flex-1 space-y-8">
+<h2 class="text-5xl font-extrabold tracking-tighter">AI-Assisted <br/>Diagnostics</h2>
+<p class="text-xl text-on-surface-variant font-light leading-relaxed">Ask Medicrew questions about patient history and get instant clinical correlations.</p>
+<div class="flex flex-wrap gap-3">
+<span class="px-5 py-2 rounded-full border border-outline-variant/30 text-sm font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">"Show trend for Bed 14"</span>
+<span class="px-5 py-2 rounded-full border border-outline-variant/30 text-sm font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">"Alert on BP spikes"</span>
+<span class="px-5 py-2 rounded-full border border-outline-variant/30 text-sm font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">"Summarize v-fib risk"</span>
+</div>
+</div>
+<div class="flex-1 w-full">
+<div class="bg-on-surface p-8 rounded-3xl shadow-2xl space-y-6">
+<div class="flex items-center gap-4 text-white/50 text-xs uppercase tracking-widest font-bold">
+<div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                    Medicrew Assistant Active
+                </div>
+<div class="bg-white/5 p-5 rounded-2xl text-white/90 text-sm leading-relaxed border border-white/10">
+                    "Patient in Room 402 has shown a 15% increase in resting heart rate over the last 4 hours. No manual intervention recorded."
+                </div>
+<div class="bg-primary/20 p-5 rounded-2xl text-blue-300 text-sm leading-relaxed self-end border border-primary/30">
+                    "Draft alert for Dr. Sarah Jenkins."
+                </div>
+<div class="pt-4 border-t border-white/10 flex justify-between items-center">
+<span class="text-white/30 text-sm">Type your command...</span>
+<span class="material-symbols-outlined text-white" data-icon="send">send</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Product Showcase -->
+<section class="py-40 px-8 bg-on-surface text-white overflow-hidden">
+<div class="max-w-[1440px] mx-auto text-center mb-24">
+<h2 class="text-5xl font-extrabold tracking-tighter mb-6">Designed for the Ethereal</h2>
+<p class="text-white/60 text-lg">A dashboard so light, you'll forget it's heavy data.</p>
+</div>
+<div class="relative max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-20">
+<div class="flex-1 relative perspective-1000">
+<div class="relative transform transition-all duration-700 hover:scale-105 rotate-x-6">
+<img class="rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] border border-white/10" data-alt="3D perspective view of a clean medical monitoring application showing complex charts and vitals on a dark minimalist screen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChOaI1MBXKEuCsKUkU5_OB7VjZjdsNznh1g3VXRsqxnMNLGbR1eFlduVYCmnkw_EpQi7HcL0mBrinYQeqmGaOpgPy8dgF_tTusb_3wZ2OoQD8pAWKij016FjICndlRuTMwV0StiTJY6aBN8S3U4818yHJ4osI34brWhEBplbPLRb1KPBgmds-G36YqshkswSd7-CZCu1yjc4iqZ2ChFVH45TN_VpDi2zR19ffv4W9v71w06n_h-66gFEqj9fHOGGPYWCNZs0_uJw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-surface via-transparent to-transparent rounded-[2.5rem]"></div>
+</div>
+</div>
+<div class="flex-1 text-left space-y-6 max-w-lg">
+<h3 class="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">Intuitive Dashboards. <br/>Precision Monitoring.</h3>
+<p class="text-white/60 text-lg font-light leading-relaxed">
+                Experience clinical data transformed into actionable insights. Our interface reduces cognitive load, allowing medical professionals to focus on what matters most—patient care.
+            </p>
+<div class="pt-6">
+<button class="text-white border border-white/20 px-8 py-3 rounded-full font-semibold hover:bg-white hover:text-on-surface transition-all duration-300">Explore Platform</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="py-60 px-8 text-center max-w-4xl mx-auto">
+<h2 class="text-6xl md:text-7xl font-extrabold tracking-tighter mb-12">Smarter Monitoring Starts Here</h2>
+<div class="flex flex-col sm:flex-row gap-6 justify-center">
+<button class="clinical-glow text-white px-12 py-5 rounded-full text-lg font-bold hover:scale-105 transition-transform shadow-xl">Get Started</button>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-white py-24 px-8 border-t border-slate-100">
+<div class="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
+<div class="space-y-6">
+<div class="text-lg font-bold text-slate-900">Medicrew</div>
+<p class="text-sm font-light text-slate-400 max-w-xs leading-relaxed">Transforming the standard of care through the clinical ethereal experience.</p>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-16">
+<div class="space-y-4">
+<h5 class="text-xs font-bold uppercase tracking-widest text-slate-900">Product</h5>
+<ul class="space-y-2 text-sm text-slate-400 uppercase font-light tracking-wide">
+<li><a class="hover:text-primary transition-colors" href="#">Platform</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">API</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Support</a></li>
+</ul>
+</div>
+<div class="space-y-4">
+<h5 class="text-xs font-bold uppercase tracking-widest text-slate-900">Legal</h5>
+<ul class="space-y-2 text-sm text-slate-400 uppercase font-light tracking-wide">
+<li><a class="hover:text-primary transition-colors" href="#">Privacy</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Terms</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Clinical Trials</a></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="max-w-[1440px] mx-auto mt-24 pt-12 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="text-sm font-['Inter'] tracking-wide uppercase font-light text-slate-400">© 2024 Medicrew. The Clinical Ethereal.</div>
+<div class="flex gap-8">
+<span class="material-symbols-outlined text-slate-300 hover:text-primary cursor-pointer transition-colors" data-icon="language">language</span>
+<span class="material-symbols-outlined text-slate-300 hover:text-primary cursor-pointer transition-colors" data-icon="share">share</span>
+</div>
+</div>
+</footer>
+</body></html>
