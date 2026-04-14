@@ -32,7 +32,12 @@ async function warmupDB() {
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
-    const [profile, setProfile] = useState(null)
+    const [profile, setProfile] = useState(() => {
+        try {
+            const cached = localStorage.getItem('medicrew_profile')
+            return cached ? JSON.parse(cached) : null
+        } catch (_) { return null }
+    })
     const [loading, setLoading] = useState(true)
     const [dbWarmingUp, setDbWarmingUp] = useState(false)
     const [profileError, setProfileError] = useState(null)
@@ -49,21 +54,31 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         let isMounted = true
-        // Reduce safety timeout to 45s and ensure it clears loading
         const safety = setTimeout(() => { 
-            if (isMounted) {
-                console.warn('[Auth] Safety timeout reached. Clearing loading state.')
-                setLoading(false) 
-            }
-        }, 45000)
+            if (isMounted) setLoading(false) 
+        }, 15000) // Reduced safety timeout for better UX
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!isMounted) return
+            
             if (session?.user) {
                 setUser(session.user)
-                await fetchProfile(session.user)
+                // OPTIMISTIC: If we have a cached profile, we stop the initial global "loading" hang
+                // This lets App.jsx render the dashboard immediately.
+                if (localStorage.getItem('medicrew_profile')) {
+                    setLoading(false)
+                }
+                
+                // Background sync
+                fetchProfile(session.user).finally(() => {
+                    if (isMounted) setLoading(false)
+                })
             } else {
-                setUser(null); setProfile(null); setProfileError(null); setLoading(false)
+                setUser(null)
+                setProfile(null)
+                setProfileError(null)
+                setLoading(false)
+                localStorage.removeItem('medicrew_profile')
             }
         })
 
@@ -90,7 +105,9 @@ export function AuthProvider({ children }) {
 
             if (!rpc1.timedOut && !rpc1.error) {
                 if (rpc1.data && rpc1.data.length > 0) {
-                    setProfile(rpc1.data[0])
+                    const data = rpc1.data[0]
+                    setProfile(data)
+                    localStorage.setItem('medicrew_profile', JSON.stringify(data))
                     setDbWarmingUp(false)
                     setLoading(false)
                     return
@@ -108,7 +125,9 @@ export function AuthProvider({ children }) {
                 }), 15000)
 
                 if (!rpc2.timedOut && !rpc2.error && rpc2.data?.length > 0) {
-                    setProfile(rpc2.data[0])
+                    const data = rpc2.data[0]
+                    setProfile(data)
+                    localStorage.setItem('medicrew_profile', JSON.stringify(data))
                     setDbWarmingUp(false)
                     setLoading(false)
                     return
@@ -133,7 +152,9 @@ export function AuthProvider({ children }) {
 
             if (!direct.timedOut && !direct.error) {
                 if (direct.data) {
-                    setProfile(direct.data)
+                    const data = direct.data
+                    setProfile(data)
+                    localStorage.setItem('medicrew_profile', JSON.stringify(data))
                     setDbWarmingUp(false)
                     setLoading(false)
                     return
@@ -155,7 +176,9 @@ export function AuthProvider({ children }) {
                 )
 
                 if (!ins.timedOut && !ins.error && ins.data) {
-                    setProfile(ins.data)
+                    const data = ins.data
+                    setProfile(data)
+                    localStorage.setItem('medicrew_profile', JSON.stringify(data))
                     setDbWarmingUp(false)
                     setLoading(false)
                     return

@@ -70,26 +70,9 @@ function ProtectedRoute({ children, allowedRoles }) {
     if (loading) return <LoadingScreen />
     if (!user) return <Navigate to="/auth" replace />
 
-    // Profile still being set up
-    if (!profile && !profileError) {
-        return (
-            <div className="loading-screen">
-                <div className="loading-logo">
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                        <rect width="48" height="48" rx="12" fill="#2563EB" />
-                        <path d="M24 10v28M10 24h28" stroke="white" strokeWidth="4" strokeLinecap="round" />
-                    </svg>
-                    <span>MediCrew</span>
-                </div>
-                <div className="spinner" />
-                <p style={{ marginTop: '1rem', color: 'var(--gray-500)', fontSize: '0.9rem' }}>
-                    {dbWarmingUp
-                        ? '⏳ Waking up database… this can take up to 30s on first load'
-                        : 'Setting up your profile…'}
-                </p>
-            </div>
-        )
-    }
+    // Removed the "Setting up your profile" forced block for better UX.
+    // The screen will now load immediately. If the role is missing, 
+    // it will sync in the background without locking the UI.
 
     // All 3 strategies failed — clean, user-friendly error
     if (!profile && profileError) {
@@ -130,9 +113,12 @@ function ProtectedRoute({ children, allowedRoles }) {
         )
     }
 
+    // Role access check - if role is missing, we optimistically assume patient for dashboard routing
+    const currentRole = profile?.role || 'patient'
+
     // Role access check
-    if (allowedRoles && !allowedRoles.includes(profile.role)) {
-        console.warn('Access denied for role:', profile.role)
+    if (allowedRoles && !allowedRoles.includes(currentRole)) {
+        console.warn('Access denied for role:', currentRole)
         return <Navigate to="/" replace />
     }
 
