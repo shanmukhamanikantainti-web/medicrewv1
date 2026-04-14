@@ -113,11 +113,15 @@ function ProtectedRoute({ children, allowedRoles }) {
         )
     }
 
-    // Role access check - if role is missing, we optimistically assume patient for dashboard routing
+    // Role access check - if role is missing, we handle it carefully to avoid incorrect redirects
     const currentRole = profile?.role || 'patient'
 
     // Role access check
     if (allowedRoles && !allowedRoles.includes(currentRole)) {
+        // If we have a user but NO profile yet (syncing), we MUST wait to be sure
+        // before redirecting them to the home page. 
+        if (!profile) return <LoadingScreen />
+        
         console.warn('Access denied for role:', currentRole)
         return <Navigate to="/" replace />
     }

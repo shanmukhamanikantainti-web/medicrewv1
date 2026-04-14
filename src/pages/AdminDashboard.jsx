@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import {
     Users, Stethoscope, Cpu, Calendar, Shield, ClipboardList,
-    CheckCircle, XCircle, Clock, Trash2, RefreshCw, UserPlus, AlertCircle, ShieldCheck, ShieldOff
+    CheckCircle, XCircle, Clock, Trash2, RefreshCw, UserPlus,
+    AlertCircle, ShieldCheck, ShieldOff, Monitor, Activity
 } from 'lucide-react'
 
 const TABS = [
@@ -74,6 +75,7 @@ export default function AdminDashboard() {
                         {tab === 'appointments' && <AppointmentsTab />}
                         {tab === 'admins' && <AdminsTab adminId={user?.id} isSuperAdmin={isSuperAdmin} />}
                         {tab === 'audit' && <AuditTab />}
+                        {tab === 'stats' && <StatsTab />}
                     </div>
                 </div>
             </main>
@@ -854,3 +856,18 @@ function AuditTab() {
         </div>
     )
 }
+
+/* ── Stats Tab placeholder ── */
+function StatsTab() {
+    return (
+        <div className="glass-panel section-container">
+            <div className="empty-state">
+                <Activity size={40} />
+                <h3>Analytics Engine Starting</h3>
+                <p>Establishing real-time data streams for system-wide health metrics.</p>
+            </div>
+        </div>
+    )
+}
+
+export default AdminDashboard
