@@ -52,17 +52,17 @@ export default function PatientDashboard() {
             <main className="main-content">
                 {/* Dashboard Utility Bar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <div className="search-pill glass-panel" style={{ padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', width: '300px' }}>
-                        <Search size={16} opacity={0.4} />
-                        <span style={{ fontSize: '0.875rem', opacity: 0.4 }}>Search patient data...</span>
+                    <div className="search-pill glass-panel" style={{ padding: '0.6rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', width: '320px', borderRadius: '99px' }}>
+                        <Search size={16} opacity={0.3} />
+                        <span style={{ fontSize: '0.85rem', opacity: 0.3, fontWeight: 500 }}>Global diagnostics search...</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button className="btn-ethereal" style={{ width: 44, height: 44, borderRadius: 12, padding: 0 }}>
-                            <Bell size={20} />
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <button className="btn-ethereal" style={{ width: 42, height: 42, borderRadius: '12px', padding: 0 }}>
+                            <Bell size={18} />
                         </button>
-                        <div className="surface-lowest" style={{ padding: '0.25rem 1rem 0.25rem 0.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(0,0,0,0.05)' }}>
-                            <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: '0.75rem' }}>{name.slice(0,1)}</div>
-                            <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>{name}</span>
+                        <div className="glass-panel" style={{ padding: '0.4rem 1.25rem 0.4rem 0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.6)' }}>
+                            <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: '0.75rem', background: 'var(--primary)', color: 'white', border: 'none' }}>{name.slice(0,1)}</div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--on-surface)' }}>{name}</span>
                         </div>
                     </div>
                 </div>

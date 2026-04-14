@@ -49,7 +49,13 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         let isMounted = true
-        const safety = setTimeout(() => { if (isMounted && loading) setLoading(false) }, 60000)
+        // Reduce safety timeout to 45s and ensure it clears loading
+        const safety = setTimeout(() => { 
+            if (isMounted) {
+                console.warn('[Auth] Safety timeout reached. Clearing loading state.')
+                setLoading(false) 
+            }
+        }, 45000)
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!isMounted) return
@@ -185,14 +191,14 @@ export function AuthProvider({ children }) {
             }
 
             // Regular user — all strategies failed
-            setProfileError('Database is unreachable. Please try again in a moment.')
+            setProfileError('Database connection timed out. If you are the administrator, please check RLS policies.')
 
         } catch (err) {
             console.error('[Auth] Critical error in fetchProfile:', err)
             if (authUser?.email === SUPERADMIN_EMAIL) {
                 setProfile(SUPERADMIN_FALLBACK(authUser))
             } else {
-                setProfileError('An unexpected error occurred. Please try again.')
+                setProfileError('An unexpected authentication error occurred.')
             }
         } finally {
             setDbWarmingUp(false)
@@ -208,7 +214,7 @@ export function AuthProvider({ children }) {
     }
 
     const verifyAdmin = (code) => {
-        if (code === 'DTI2026MEDICREW4240') {
+        if (code === 'MEDICREWV12026') {
             setIsAdminVerified(true)
             sessionStorage.setItem('admin_verified', 'true')
             return true

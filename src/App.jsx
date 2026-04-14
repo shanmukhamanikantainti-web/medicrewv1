@@ -11,6 +11,7 @@ import DoctorDashboard from './pages/DoctorDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminVerify from './pages/AdminVerify'
 import { AdminShortcut } from './components/AdminShortcut'
+import { AlertCircle } from 'lucide-react'
 
 // ── Loading screen ──────────────────────────────────────────────────
 function LoadingScreen() {
@@ -29,27 +30,31 @@ function LoadingScreen() {
     )
 }
 
-// ── Emergency banner shown when DB is unreachable but superadmin bypassed in ──
-function EmergencyBanner() {
+// ── Error Display for when things go wrong ──────────────────────────
+function ErrorDisplay({ error, onRetry, onReset }) {
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-            background: '#ef4444', color: '#fff', padding: '10px 20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '0.75rem', fontSize: '0.85rem', fontWeight: 600
-        }}>
-            ⚠️ Emergency Mode: Database unreachable.
-            <a
-                href="https://app.supabase.com"
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: '#fef9c3', textDecoration: 'underline' }}
-            >
-                Run supabase_fix_rls.sql → SQL Editor now →
-            </a>
+        <div className="loading-screen" style={{ background: 'var(--bg)' }}>
+            <div className="card" style={{ maxWidth: 420, width: '100%', textAlign: 'center', padding: '2.5rem' }}>
+                <div style={{
+                    width: 56, height: 56, borderRadius: '50%', background: '#fee2e2',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem'
+                }}>
+                    <AlertCircle size={28} color="#ef4444" />
+                </div>
+                <h2 style={{ color: 'var(--gray-900)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>Connection Blocked</h2>
+                <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                    {error || 'The secure connection to our medical database was interrupted.'}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <button className="btn btn-primary" onClick={onRetry}>Try Again</button>
+                    <button className="btn btn-ghost" onClick={onReset} style={{ fontSize: '0.85rem' }}>Sign Out & Reset</button>
+                </div>
+            </div>
         </div>
     )
 }
+
+// ── Emergency banner shown when DB is unreachable ──────────────────
 
 // ── Protected route ─────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
@@ -147,9 +152,13 @@ function ProtectedRoute({ children, allowedRoles }) {
 }
 
 export default function App() {
-    const { user, profile, loading } = useAuth()
+    const { user, profile, loading, profileError, fetchProfile, resetAuth } = useAuth()
 
     if (loading) return <LoadingScreen />
+
+    if (user && !profile && profileError) {
+        return <ErrorDisplay error={profileError} onRetry={fetchProfile} onReset={resetAuth} />
+    }
 
     return (
         <>

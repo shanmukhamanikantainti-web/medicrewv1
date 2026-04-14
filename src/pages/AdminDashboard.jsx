@@ -41,21 +41,31 @@ export default function AdminDashboard() {
                 </header>
 
                 <div className="page-content">
-                    <nav className="tabs-container glass-panel">
+                    <div className="tabs-container">
                         <div className="tabs">
-                            {TABS.map(t => (
-                                <button
-                                    key={t.id}
-                                    className={`tab-btn ${tab === t.id ? 'active' : ''}`}
-                                    onClick={() => setTab(t.id)}
-                                    id={`admin-tab-${t.id}`}
-                                >
-                                    <t.icon size={16} />
-                                    <span>{t.label}</span>
-                                </button>
-                            ))}
+                            <button
+                                className={`tab-btn ${tab === 'users' ? 'active' : ''}`}
+                                onClick={() => setTab('users')}
+                            >
+                                <Users size={18} />
+                                Users Inventory
+                            </button>
+                            <button
+                                className={`tab-btn ${tab === 'devices' ? 'active' : ''}`}
+                                onClick={() => setTab('devices')}
+                            >
+                                <Monitor size={18} />
+                                Device Network
+                            </button>
+                            <button
+                                className={`tab-btn ${tab === 'stats' ? 'active' : ''}`}
+                                onClick={() => setTab('stats')}
+                            >
+                                <Activity size={18} />
+                                Analytics
+                            </button>
                         </div>
-                    </nav>
+                    </div>
 
                     <div className="tab-pane-content">
                         {tab === 'users' && <UsersTab adminId={user?.id} />}
@@ -275,14 +285,15 @@ function DoctorsTab({ adminId }) {
                     <p>Onboard qualified medical staff to begin operations.</p>
                 </div>
             ) : (
-                <div className="table-wrapper">
+                <div className="table-wrapper animate-fade">
                     <table className="ethereal-table">
                         <thead>
                             <tr>
-                                <th>Practitioner</th>
-                                <th>Credentials</th>
-                                <th>Status</th>
-                                <th className="text-right">Actions</th>
+                                <th>Email</th>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Verified</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -461,15 +472,15 @@ function DevicesTab({ adminId }) {
                     <p>Register hardware terminals to begin telemetry ingestion.</p>
                 </div>
             ) : (
-                <div className="table-wrapper">
+                <div className="table-wrapper animate-fade">
                     <table className="ethereal-table">
                         <thead>
                             <tr>
-                                <th>Terminal ID</th>
-                                <th>Assigned Link</th>
-                                <th>Relay Status</th>
+                                <th>Serial Number</th>
+                                <th>Patient</th>
+                                <th>Status</th>
                                 <th>Last Pulse</th>
-                                <th className="text-right">Overrides</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>

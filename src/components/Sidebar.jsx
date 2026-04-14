@@ -73,29 +73,26 @@ export default function Sidebar() {
                         to={to}
                         end={end}
                         className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-                        id={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
                     >
-                        <div className="sidebar-icon-container">
-                            <Icon size={20} />
-                        </div>
-                        <span style={{ flex: 1 }}>{label}</span>
-                        <ChevronRight size={14} className="chevron" style={{ opacity: 0.3 }} />
+                        <Icon size={20} />
+                        <span style={{ fontSize: '0.875rem' }}>{label}</span>
                     </NavLink>
                 ))}
             </nav>
             <div className="sidebar-footer">
-                <div className="sidebar-user">
-                    <div className="sidebar-avatar">{initials}</div>
+                <div className="sidebar-user glass-panel" style={{ padding: '0.75rem', borderRadius: '16px', background: 'rgba(255,255,255,0.2)' }}>
+                    <div className="sidebar-avatar" style={{ border: 'none', background: 'var(--primary)', color: 'white' }}>{initials}</div>
                     <div className="sidebar-user-info">
-                        <div className="sidebar-user-name">{profile?.full_name || profile?.email}</div>
-                        <div className="sidebar-user-role">
-                            <RoleIcon size={12} />
+                        <div className="sidebar-user-name" style={{ fontSize: '0.8125rem' }}>{profile?.full_name || 'Authorized User'}</div>
+                        <div className="sidebar-user-role" style={{ fontSize: '0.6875rem', opacity: 0.6 }}>
+                            <RoleIcon size={10} />
                             {role}
                         </div>
                     </div>
                 </div>
-                <button onClick={handleSignOut} className="sidebar-link" id="sign-out-btn" style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
-                    <LogOut size={20} /> <span>Sign Out</span>
+                <button onClick={handleSignOut} className="sidebar-link" style={{ marginTop: '0.5rem', color: 'var(--red-alert)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                    <LogOut size={20} />
+                    <span style={{ fontSize: '0.875rem' }}>Exit System</span>
                 </button>
             </div>
         </aside>
