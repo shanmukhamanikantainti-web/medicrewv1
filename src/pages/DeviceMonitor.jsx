@@ -131,8 +131,8 @@ export default function DeviceMonitor() {
         setScanProgress(0)
         setError('')
 
-        // Priority subnets (including the one from your screenshot)
-        const subnets = ['10.54.96', '10.54.100', '192.168.1', '192.168.0', '10.0.0']
+        // Priority subnets (targeted to your specific hardware network)
+        const subnets = ['10.249.96', '10.54.96', '10.54.100', '192.168.1', '192.168.0']
         let detected = false
 
         for (const subnet of subnets) {
