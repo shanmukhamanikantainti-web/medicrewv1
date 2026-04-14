@@ -131,8 +131,8 @@ export default function DeviceMonitor() {
         setScanProgress(0)
         setError('')
 
-        // Common subnets to check
-        const subnets = ['10.54.100', '192.168.1', '192.168.0', '10.0.0']
+        // Priority subnets (including the one from your screenshot)
+        const subnets = ['10.54.96', '10.54.100', '192.168.1', '192.168.0', '10.0.0']
         let detected = false
 
         for (const subnet of subnets) {
@@ -143,22 +143,25 @@ export default function DeviceMonitor() {
                 setScanProgress(Math.floor((i / 255) * 100))
 
                 try {
-                    const probe = new Image()
-                    const probePromise = new Promise((resolve, reject) => {
-                        probe.onload = () => resolve(true)
-                        probe.onerror = () => reject(false)
-                        probe.src = `http://${ip}/favicon.ico?t=${Date.now()}` 
-                        setTimeout(() => reject(false), 200) 
+                    // Optimized probe for ESP32 servers (which often don't have favicons)
+                    // We use fetch with no-cors to detect presence without CORS errors
+                    const controller = new AbortController()
+                    const timeoutId = setTimeout(() => controller.abort(), 150)
+                    
+                    const res = await fetch(`http://${ip}/`, { 
+                        mode: 'no-cors', 
+                        signal: controller.signal 
                     })
-
-                    await probePromise
-                    console.log(`✅ Signal found at: ${ip}`)
+                    
+                    // If we get here, the IP is alive and serving a web server
+                    clearTimeout(timeoutId)
+                    console.log(`📡 Hardware signal locked at: ${ip}`)
                     setFoundIp(ip)
                     setConnStatus('live')
                     detected = true
-                    pollHardware(ip) // Trigger first poll immediately
+                    pollHardware(ip)
                     break
-                } catch (e) { /* next */ }
+                } catch (e) { /* IP not found or timeout */ }
             }
         }
 
