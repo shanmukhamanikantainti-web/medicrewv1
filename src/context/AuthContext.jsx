@@ -5,16 +5,27 @@ const AuthContext = createContext(null)
 
 const SUPERADMIN_EMAIL = 'shanmukhamanikanta.inti@gmail.com'
 
+// Synthetic superadmin profile used ONLY when DB is unreachable.
+// Lets the admin log in, run the SQL fix, and restore full DB access.
+const SUPERADMIN_FALLBACK = (user) => ({
+    id: user.id,
+    email: user.email,
+    full_name: 'Shanmukha (Emergency Mode)',
+    role: 'superadmin',
+    verified: true,
+    _emergency: true   // flag so we can show a banner
+})
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [debugLog, setDebugLog] = useState([])
-    const [isAdminVerified, setIsAdminVerified] = useState(() => {
-        return sessionStorage.getItem('admin_verified') === 'true'
-    })
+    const [profileError, setProfileError] = useState(null)
+    const [isAdminVerified, setIsAdminVerified] = useState(() =>
+        sessionStorage.getItem('admin_verified') === 'true'
+    )
 
-    // Auto-verify if superadmin email matches
+    // Auto-verify superadmin email
     useEffect(() => {
         if (user?.email === SUPERADMIN_EMAIL && !isAdminVerified) {
             setIsAdminVerified(true)
@@ -22,131 +33,134 @@ export function AuthProvider({ children }) {
         }
     }, [user, isAdminVerified])
 
-    const addLog = (msg, type = 'info') => {
-        console.log(`[DEBUG] ${msg}`)
-        setDebugLog(prev => [...prev.slice(-10), { msg, type, time: new Date().toLocaleTimeString() }])
-    }
-
     useEffect(() => {
         let isMounted = true
 
-        // Use a safety timeout in case onAuthStateChange is slow
-        const timeout = setTimeout(() => {
-            if (isMounted && loading) {
-                console.warn('Auth check timeout')
-                setLoading(false)
-            }
-        }, 8000)
+        // Hard safety cap — never block UI forever
+        const safetyTimer = setTimeout(() => {
+            if (isMounted && loading) setLoading(false)
+        }, 35000)
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            addLog(`Auth Event: ${event} for ${session?.user?.email || 'no user'}`)
             if (!isMounted) return
-
             if (session?.user) {
                 setUser(session.user)
                 await fetchProfile(session.user)
             } else {
                 setUser(null)
                 setProfile(null)
+                setProfileError(null)
                 setLoading(false)
             }
         })
 
         return () => {
             isMounted = false
-            clearTimeout(timeout)
+            clearTimeout(safetyTimer)
             subscription.unsubscribe()
         }
     }, [])
 
+    // ─── Core profile fetch ────────────────────────────────────────
     async function fetchProfile(authUser, attempt = 1) {
-        const MAX_ATTEMPTS = 3
+        const MAX = 3
         if (!authUser) return
-        addLog(`🚀 Profile Fetch Start: ${authUser.email} (attempt ${attempt}/${MAX_ATTEMPTS})`)
-        window.supabase = supabase
+        setProfileError(null)
 
         try {
-            addLog('📡 Sending SELECT request to profiles table...')
+            // ── Strategy 1: SECURITY DEFINER RPC (bypasses RLS deadlock) ──
+            // Works after running supabase_fix_rls.sql
+            const rpcResult = await Promise.race([
+                supabase.rpc('get_my_profile'),
+                new Promise(r => setTimeout(() => r({ timedOut: true }), 8000))
+            ])
 
-            // Race the database request against a 10s timeout
-            const fetchPromise = supabase.from('profiles').select('*').eq('id', authUser.id).single()
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 10000))
-
-            const result = await Promise.race([fetchPromise, timeoutPromise])
-
-            if (result.timedOut) {
-                addLog(`❌ DATABASE REQUEST TIMED OUT (10s) on attempt ${attempt}.`, 'error')
-                if (attempt < MAX_ATTEMPTS) {
-                    const delay = attempt * 2000
-                    addLog(`⏳ Retrying in ${delay / 1000}s...`, 'warn')
-                    await new Promise(r => setTimeout(r, delay))
-                    return fetchProfile(authUser, attempt + 1)
-                }
-                addLog('🚫 All retry attempts exhausted. Run supabase_fix_rls.sql in your Supabase dashboard.', 'error')
-                return setLoading(false)
+            if (!rpcResult.timedOut && !rpcResult.error && rpcResult.data?.length > 0) {
+                setProfile(rpcResult.data[0])
+                setLoading(false)
+                return
             }
 
-            const { data, error } = result
-            addLog(`⌛ Request Finished. Status: ${error ? 'Error' : 'Success'}`)
+            // ── Strategy 2: RPC returned empty → try upsert RPC ──────────
+            if (!rpcResult.timedOut && !rpcResult.error && rpcResult.data?.length === 0) {
+                const role = authUser.email === SUPERADMIN_EMAIL ? 'superadmin'
+                    : (authUser.user_metadata?.role || 'patient')
+                const upsertResult = await supabase.rpc('upsert_my_profile', {
+                    p_email: authUser.email,
+                    p_full_name: authUser.user_metadata?.full_name || authUser.email.split('@')[0],
+                    p_role: role,
+                    p_verified: authUser.email === SUPERADMIN_EMAIL
+                })
+                if (!upsertResult.error && upsertResult.data?.length > 0) {
+                    setProfile(upsertResult.data[0])
+                    setLoading(false)
+                    return
+                }
+            }
 
-            if (error) {
-                addLog(`🟡 Profile not found or error: ${error.message} (${error.code})`, 'warn')
+            // ── Strategy 3: Direct table query (works if RLS is clean) ───
+            if (attempt <= MAX) {
+                const direct = await Promise.race([
+                    supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle(),
+                    new Promise(r => setTimeout(() => r({ timedOut: true }), 8000))
+                ])
 
-                // PGRST116 = no rows returned — profile doesn't exist yet
-                if (error.code === 'PGRST116' || error.message?.includes('JSON object')) {
-                    addLog('🛠️ Attempting to create profile record...')
-                    const role = authUser.email === SUPERADMIN_EMAIL ? 'superadmin' : (authUser.user_metadata?.role || 'patient')
-
-                    const profileData = {
-                        id: authUser.id,
-                        email: authUser.email,
-                        role,
-                        full_name: authUser.user_metadata?.full_name || authUser.email.split('@')[0],
-                        verified: authUser.email === SUPERADMIN_EMAIL
+                if (!direct.timedOut) {
+                    if (!direct.error && direct.data) {
+                        setProfile(direct.data)
+                        setLoading(false)
+                        return
                     }
-                    addLog(`📦 Data payload: ${JSON.stringify(profileData)}`)
 
-                    const { data: newProfile, error: insertError } = await supabase
-                        .from('profiles')
-                        .insert([profileData])
-                        .select()
-                        .single()
+                    // No row yet → insert
+                    if (!direct.error && !direct.data) {
+                        const insertResult = await supabase.from('profiles')
+                            .insert([{
+                                id: authUser.id,
+                                email: authUser.email,
+                                full_name: authUser.user_metadata?.full_name || authUser.email.split('@')[0],
+                                role: authUser.email === SUPERADMIN_EMAIL ? 'superadmin' : (authUser.user_metadata?.role || 'patient'),
+                                verified: authUser.email === SUPERADMIN_EMAIL
+                            }])
+                            .select().maybeSingle()
 
-                    if (insertError) {
-                        addLog(`❌ DATABASE INSERT FAILED: ${insertError.message}`, 'error')
-                        if (insertError.details) addLog(`Details: ${insertError.details}`, 'error')
-
-                        if (insertError.code === '23503') {
-                            // FK violation: auth user missing, force sign out
-                            addLog('⚠️ User record missing in Auth. Signing out...', 'warn')
-                            await signOut()
-                        } else if (insertError.code === '23505') {
-                            // Unique violation: trigger already created the profile — just refetch
-                            addLog('ℹ️ Profile created by trigger (race condition). Refetching...', 'warn')
+                        if (!insertResult.error && insertResult.data) {
+                            setProfile(insertResult.data)
+                            setLoading(false)
+                            return
+                        }
+                        // 23505 = trigger already created it — just refetch
+                        if (insertResult.error?.code === '23505') {
                             await new Promise(r => setTimeout(r, 500))
                             return fetchProfile(authUser, attempt)
-                        } else {
-                            addLog(`❌ Unhandled insert error: ${insertError.code}`, 'error')
                         }
-                    } else {
-                        addLog('✅ Profile created successfully!')
-                        setProfile(newProfile)
-                    }
-                } else {
-                    addLog(`❌ Unexpected fetch error: ${error.message}`, 'error')
-                    if (attempt < MAX_ATTEMPTS) {
-                        const delay = attempt * 2000
-                        addLog(`⏳ Retrying in ${delay / 1000}s...`, 'warn')
-                        await new Promise(r => setTimeout(r, delay))
-                        return fetchProfile(authUser, attempt + 1)
                     }
                 }
-            } else if (data) {
-                addLog(`✅ Profile loaded successfully. Role: ${data.role}`)
-                setProfile(data)
+
+                // Retry with backoff
+                if (attempt < MAX) {
+                    await new Promise(r => setTimeout(r, attempt * 2000))
+                    return fetchProfile(authUser, attempt + 1)
+                }
             }
+
+            // ── Strategy 4: Emergency superadmin bypass ───────────────────
+            // Database is completely unreachable. Give superadmin a synthetic
+            // profile so they can at least access the admin panel and run the SQL fix.
+            if (authUser.email === SUPERADMIN_EMAIL) {
+                setProfile(SUPERADMIN_FALLBACK(authUser))
+                setLoading(false)
+                return
+            }
+
+            // All strategies failed for regular user
+            setProfileError('Database unreachable. Please contact your administrator.')
         } catch (err) {
-            addLog(`🚨 CRITICAL SYSTEM ERROR: ${err.message}`, 'error')
+            console.error('[AuthContext] Critical error:', err)
+            // Last-resort superadmin protection
+            if (authUser?.email === SUPERADMIN_EMAIL) {
+                setProfile(SUPERADMIN_FALLBACK(authUser))
+            }
         } finally {
             setLoading(false)
         }
@@ -156,6 +170,7 @@ export function AuthProvider({ children }) {
         await supabase.auth.signOut()
         setUser(null)
         setProfile(null)
+        setProfileError(null)
         setIsAdminVerified(false)
         sessionStorage.removeItem('admin_verified')
     }
@@ -171,14 +186,21 @@ export function AuthProvider({ children }) {
     }
 
     async function updateProfile(updates) {
-        const { data } = await supabase
-            .from('profiles')
-            .update(updates)
-            .eq('id', user.id)
-            .select()
-            .single()
-        setProfile(data)
-        return data
+        try {
+            const { data } = await supabase.from('profiles')
+                .update(updates).eq('id', user.id).select().maybeSingle()
+            if (data) setProfile(data)
+            return data
+        } catch (err) {
+            console.error('updateProfile error:', err)
+        }
+    }
+
+    const resetAuth = async () => {
+        await supabase.auth.signOut()
+        localStorage.clear()
+        sessionStorage.clear()
+        window.location.reload()
     }
 
     const role = profile?.role || null
@@ -187,18 +209,12 @@ export function AuthProvider({ children }) {
     const isAdmin = role === 'admin' || role === 'superadmin'
     const isSuperAdmin = role === 'superadmin'
 
-    const resetAuth = async () => {
-        addLog('Resetting Auth State...')
-        await supabase.auth.signOut()
-        localStorage.clear()
-        window.location.reload()
-    }
-
     return (
         <AuthContext.Provider value={{
-            user, profile, loading, role, debugLog, addLog,
+            user, profile, loading, role, profileError,
             isPatient, isDoctor, isAdmin, isSuperAdmin, isAdminVerified,
-            signOut, updateProfile, resetAuth, verifyAdmin, fetchProfile: () => user && fetchProfile(user)
+            signOut, updateProfile, resetAuth, verifyAdmin,
+            fetchProfile: () => user && fetchProfile(user)
         }}>
             {children}
         </AuthContext.Provider>
