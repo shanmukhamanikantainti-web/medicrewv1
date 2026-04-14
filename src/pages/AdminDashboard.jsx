@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import {
     Users, Stethoscope, Cpu, Calendar, Shield, ClipboardList,
-    CheckCircle, XCircle, Clock, Trash2, RefreshCw, UserPlus, AlertCircle
+    CheckCircle, XCircle, Clock, Trash2, RefreshCw, UserPlus, AlertCircle, ShieldCheck, ShieldOff
 } from 'lucide-react'
 
 const TABS = [
@@ -69,6 +69,7 @@ export default function AdminDashboard() {
 function UsersTab({ adminId }) {
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
+    const [actionLoading, setActionLoading] = useState({}) // per-row loading state
 
     const fetchUsers = () => {
         setLoading(true)
@@ -80,11 +81,26 @@ function UsersTab({ adminId }) {
         fetchUsers()
     }, [])
 
+    async function toggleVerify(u) {
+        const newVerified = !u.verified
+        setActionLoading(prev => ({ ...prev, [u.id + '_verify']: true }))
+        const { error } = await supabase.from('profiles').update({ verified: newVerified }).eq('id', u.id)
+        if (error) {
+            alert('Error updating verification: ' + error.message)
+        } else {
+            await logAudit(supabase, adminId, `${newVerified ? 'Verified' : 'Unverified'} user ${u.email}`, u.id)
+            setUsers(prev => prev.map(x => x.id === u.id ? { ...x, verified: newVerified } : x))
+        }
+        setActionLoading(prev => ({ ...prev, [u.id + '_verify']: false }))
+    }
+
     async function deleteUser(id, email) {
         if (!confirm(`PERMANENTLY DELETE user ${email}? This action cannot be undone and will remove them from Authentication.`)) return
+        setActionLoading(prev => ({ ...prev, [id + '_delete']: true }))
         const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: id })
         if (error) {
-            alert("Error deleting user: " + error.message + "\n\nNote: If this is the first time, make sure you've run the SQL function in Supabase.")
+            alert('Error deleting user: ' + error.message + '\n\nNote: If this is the first time, make sure you\'ve run the SQL function in Supabase.')
+            setActionLoading(prev => ({ ...prev, [id + '_delete']: false }))
             return
         }
         await logAudit(supabase, adminId, `Deleted user ${email}`, id)
@@ -113,13 +129,44 @@ function UsersTab({ adminId }) {
                                         <div style={{ fontSize: '0.8125rem', color: 'var(--gray-400)' }}>{u.email}</div>
                                     </td>
                                     <td><span className={`badge ${roleColor[u.role] || 'badge-gray'}`}>{u.role}</span></td>
-                                    <td>{u.verified ? <CheckCircle size={16} color="#16a34a" /> : <Clock size={16} color="#ca8a04" />}</td>
                                     <td>
-                                        {u.role !== 'superadmin' && (
-                                            <button className="btn btn-sm btn-ghost" style={{ color: '#dc2626' }} onClick={() => deleteUser(u.id, u.email)}>
-                                                <Trash2 size={13} /> Delete User
-                                            </button>
-                                        )}
+                                        {u.verified
+                                            ? <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle size={11} /> Verified</span>
+                                            : <span className="badge badge-yellow" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={11} /> Pending</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {u.role !== 'superadmin' && (
+                                                <button
+                                                    id={`verify-btn-${u.id}`}
+                                                    className="btn btn-sm"
+                                                    style={u.verified
+                                                        ? { background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
+                                                        : { background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }
+                                                    }
+                                                    onClick={() => toggleVerify(u)}
+                                                    disabled={actionLoading[u.id + '_verify']}
+                                                >
+                                                    {actionLoading[u.id + '_verify']
+                                                        ? <RefreshCw size={12} className="spin" />
+                                                        : u.verified ? <ShieldOff size={12} /> : <ShieldCheck size={12} />
+                                                    }
+                                                    {u.verified ? ' Unverify' : ' Verify'}
+                                                </button>
+                                            )}
+                                            {u.role !== 'superadmin' && (
+                                                <button
+                                                    id={`delete-btn-${u.id}`}
+                                                    className="btn btn-sm btn-ghost"
+                                                    style={{ color: '#dc2626' }}
+                                                    onClick={() => deleteUser(u.id, u.email)}
+                                                    disabled={actionLoading[u.id + '_delete']}
+                                                >
+                                                    {actionLoading[u.id + '_delete'] ? <RefreshCw size={12} className="spin" /> : <Trash2 size={13} />} Delete
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
