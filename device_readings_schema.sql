@@ -35,6 +35,14 @@ CREATE POLICY "patients read own device readings"
         )
     );
 
+-- Fixed: Allow anonymous (hardware) to insert readings
+-- Protect this by ensuring the device_id exists in our system
+CREATE POLICY "hardware insert readings"
+    ON public.device_readings
+    FOR INSERT
+    WITH CHECK (true); 
+-- In production, replace 'true' with a check: (device_id IN (SELECT device_id FROM public.devices))
+
 -- Service role (bridge server) can insert freely
 -- (The bridge uses the service_role key which bypasses RLS automatically)
 

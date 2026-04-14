@@ -21,23 +21,59 @@ export default function PatientDashboard() {
     const [appointments, setAppointments] = useState([])
     const [aiHistory, setAiHistory] = useState([])
 
-    // Polling for vitals (simulate IoT)
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (document.visibilityState === 'visible') setVitals(generateVitals())
-        }, 4000)
-        return () => clearInterval(interval)
-    }, [])
-
     useEffect(() => {
         if (!user) return
-        // Fetch device
+        
+        // Fetch active device
         supabase.from('devices').select('*').eq('patient_id', user.id).eq('status', 'active').single()
-            .then(({ data }) => data && setDevice(data))
-        // Fetch appointments
+            .then(({ data }) => {
+                if (data) {
+                    setDevice(data)
+                    // Subscribe to real-time updates for this device
+                    const channel = supabase
+                        .channel(`vitals-${data.device_id}`)
+                        .on('postgres_changes', { 
+                            event: 'INSERT', 
+                            schema: 'public', 
+                            table: 'device_readings',
+                            filter: `device_id=eq.${data.device_id}`
+                        }, (payload) => {
+                            console.log('💓 Live Telemetry:', payload.new)
+                            const d = payload.new
+                            setVitals({
+                                hr: d.heart_rate || 0,
+                                spo2: d.spo2 || 98,
+                                temp: d.temperature || 36.5,
+                                bp: d.blood_pressure || '120/80',
+                                last_seen: d.recorded_at
+                            })
+                        })
+                        .subscribe()
+                    
+                    return () => supabase.removeChannel(channel)
+                }
+            })
+
+        // Fetch last reading for initial state
+        supabase.from('device_readings')
+            .select('*')
+            .order('recorded_at', { ascending: false })
+            .limit(1)
+            .then(({ data }) => {
+                if (data && data[0]) {
+                    const d = data[0]
+                    setVitals({
+                        hr: d.heart_rate || 0,
+                        spo2: d.spo2 || 98,
+                        temp: d.temperature || 36.5,
+                        bp: d.blood_pressure || '120/80'
+                    })
+                }
+            })
+
+        // Fetch appointments & AI history
         supabase.from('appointments').select('*, profiles!doctor_id(full_name)').eq('patient_id', user.id).order('date', { ascending: true }).limit(5)
             .then(({ data }) => data && setAppointments(data))
-        // Fetch AI history
         supabase.from('ai_results').select('*').eq('patient_id', user.id).order('created_at', { ascending: false }).limit(3)
             .then(({ data }) => data && setAiHistory(data))
     }, [user])

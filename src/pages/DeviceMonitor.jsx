@@ -24,12 +24,13 @@ export default function DeviceMonitor() {
     const [vitals,       setVitals]       = useState(null)
     const [linking,      setLinking]      = useState(false)
     const [error,        setError]        = useState('')
-    const [pulse,        setPulse]        = useState(false)
-    const [isSimulating, setIsSimulating] = useState(false)
     const [connStatus,   setConnStatus]   = useState('idle') // idle | scanning | live | blocked
     const [history,      setHistory]      = useState([])
     const [scanProgress, setScanProgress] = useState(0)
     const [foundIp,      setFoundIp]      = useState(null)
+    const [manualIp,     setManualIp]     = useState('')
+    const [pulse,        setPulse]        = useState(false)
+    const [isSimulating, setIsSimulating] = useState(false)
     
     const simRef = useRef(null)
     const scanRef = useRef(false)
@@ -122,6 +123,29 @@ export default function DeviceMonitor() {
         const timer = setInterval(() => pollHardware(foundIp), 3000)
         return () => clearInterval(timer)
     }, [foundIp, connStatus, pollHardware])
+
+    const handleManualConnect = async (e) => {
+        if (e) e.preventDefault()
+        if (!manualIp) return
+        
+        setError('')
+        setConnStatus('scanning')
+        setScanProgress(50)
+
+        try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 1000)
+            await fetch(`http://${manualIp}/`, { mode: 'no-cors', signal: controller.signal })
+            clearTimeout(timeoutId)
+            
+            setFoundIp(manualIp)
+            setConnStatus('live')
+            pollHardware(manualIp)
+        } catch (err) {
+            setConnStatus('idle')
+            setError(`Could not reach ${manualIp}. Check the IP or Allow Insecure Content.`)
+        }
+    }
 
     // ── Network Scanner Logic (Discovery) ────────────────────────────────
     const scanLocalNetwork = async () => {
@@ -334,6 +358,25 @@ export default function DeviceMonitor() {
                                     <div className="radar-container">
                                         <div className="radar-sweep"></div>
                                         <Search size={32} className="radar-icon" />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flex: 1, minWidth: '280px', marginTop: '1.5rem', maxWidth: '400px', margin: '1.5rem auto' }}>
+                                        <div className="glass-panel" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 1rem', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
+                                            <Search size={16} opacity={0.3} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Enter Device IP (e.g. 10.249.96.170)"
+                                                value={manualIp}
+                                                onChange={(e) => setManualIp(e.target.value)}
+                                                style={{ background: 'none', border: 'none', color: 'var(--gray-800)', fontSize: '0.85rem', width: '100%', outline: 'none', padding: '0.75rem 0' }}
+                                            />
+                                        </div>
+                                        <button 
+                                            onClick={handleManualConnect}
+                                            className="btn btn-primary" 
+                                            style={{ whiteSpace: 'nowrap', borderRadius: '12px' }}
+                                        >
+                                            Sync Now
+                                        </button>
                                     </div>
                                     <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '1.5rem' }}>Probing Your Network...</h3>
                                     <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0 1.5rem' }}>Attempting to find device hardware on local subnets.</p>
