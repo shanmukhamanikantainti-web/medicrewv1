@@ -53,9 +53,9 @@ function EmergencyBanner() {
 
 // ── Protected route ─────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
-    const { user, profile, loading, profileError, isAdminVerified, fetchProfile, resetAuth } = useAuth()
+    const { user, profile, loading, dbWarmingUp, profileError, isAdminVerified, fetchProfile, resetAuth } = useAuth()
 
-    // Auto-retry profile fetch if it errored (user navigated back, etc.)
+    // Auto-retry profile fetch if it errored
     useEffect(() => {
         if (!loading && user && !profile && !profileError) {
             fetchProfile()
@@ -65,7 +65,7 @@ function ProtectedRoute({ children, allowedRoles }) {
     if (loading) return <LoadingScreen />
     if (!user) return <Navigate to="/auth" replace />
 
-    // Profile missing and still loading → spinner
+    // Profile still being set up
     if (!profile && !profileError) {
         return (
             <div className="loading-screen">
@@ -78,7 +78,9 @@ function ProtectedRoute({ children, allowedRoles }) {
                 </div>
                 <div className="spinner" />
                 <p style={{ marginTop: '1rem', color: 'var(--gray-500)', fontSize: '0.9rem' }}>
-                    Setting up your profile…
+                    {dbWarmingUp
+                        ? '⏳ Waking up database… this can take up to 30s on first load'
+                        : 'Setting up your profile…'}
                 </p>
             </div>
         )
