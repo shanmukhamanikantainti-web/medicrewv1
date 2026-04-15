@@ -52,8 +52,8 @@ export default function DeviceMonitor() {
 
     // ── Supabase Realtime (Live Data listener) ───────────────────────────────
     useEffect(() => {
-        if (!device || isSimulating) return
-        setConnStatus('scanning') // Start scanning when device is loaded
+        if (!device) return
+        if (!isSimulating) setConnStatus('scanning')
 
         const channel = supabase
             .channel(`readings-${device.device_id}`)
@@ -62,7 +62,7 @@ export default function DeviceMonitor() {
                 filter: `device_id=eq.${device.device_id}`
             }, (payload) => {
                 const r = payload.new
-                setVitals(r)
+                setVitals(v => ({ ...v, ...r })) // Merge real data
                 setConnStatus('live')
                 setError('')
                 setPulse(true)
@@ -147,6 +147,40 @@ export default function DeviceMonitor() {
         }
     }
 
+    // ── Simulation Engine ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!isSimulating || !device) return
+
+        const runSim = () => {
+            setVitals(prev => {
+                const hr = 65 + Math.floor(Math.random() * 20)
+                const o2 = 95 + Math.floor(Math.random() * 5)
+                const sys = 110 + Math.floor(Math.random() * 20)
+                const dia = 70 + Math.floor(Math.random() * 15)
+                
+                // Only generate temperature if we don't have a real one from hardware
+                const simulatedTemp = (36.5 + Math.random() * 0.8).toFixed(1)
+                
+                return {
+                    ...prev,
+                    heart_rate: hr,
+                    spo2: o2,
+                    blood_pressure: `${sys}/${dia}`,
+                    temperature: prev?.temperature || simulatedTemp,
+                    recorded_at: new Date().toISOString()
+                }
+            })
+            
+            setConnStatus('live')
+            setPulse(true)
+            setTimeout(() => setPulse(false), 600)
+        }
+
+        runSim() // Initial
+        const timer = setInterval(runSim, 2500)
+        return () => clearInterval(timer)
+    }, [isSimulating, device])
+
     // ── Network Scanner Logic (Discovery) ────────────────────────────────
     const scanLocalNetwork = async () => {
         if (scanRef.current) return
@@ -155,20 +189,22 @@ export default function DeviceMonitor() {
         setScanProgress(0)
         setError('')
 
-        // 1. TRY FIXED HARDWARE IP FIRST (User Request)
-        const fixedIp = '10.249.96.170'
-        try {
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 200)
-            await fetch(`http://${fixedIp}/`, { mode: 'no-cors', signal: controller.signal })
-            clearTimeout(timeoutId)
-            console.log(`🚀 Locked to fixed hardware IP: ${fixedIp}`)
-            setFoundIp(fixedIp)
-            setConnStatus('live')
-            pollHardware(fixedIp)
-            scanRef.current = false
-            return 
-        } catch (e) { /* Fallback to scan if fixed IP is down */ }
+        // 1. TRY MANUAL IP OR LAST KNOWN IP
+        const targetIp = manualIp || device?.ip_address
+        if (targetIp) {
+            try {
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 200)
+                await fetch(`http://${targetIp}/`, { mode: 'no-cors', signal: controller.signal })
+                clearTimeout(timeoutId)
+                console.log(`🚀 Locked to IP: ${targetIp}`)
+                setFoundIp(targetIp)
+                setConnStatus('live')
+                pollHardware(targetIp)
+                scanRef.current = false
+                return 
+            } catch (e) { /* Fallback to scan */ }
+        }
 
         // 2. FALLBACK SCAN (If fixed IP not found)
         const subnets = ['10.249.96', '10.54.96', '10.54.100', '192.168.1', '192.168.0']
@@ -373,7 +409,10 @@ export default function DeviceMonitor() {
                                     </div>
                                 </div>
                                 <div style={{ display:'flex', gap:'1rem' }}>
-                                    <button className="btn btn-secondary btn-sm" onClick={scanLocalNetwork} disabled={connStatus === 'scanning'}>
+                                    <button className="btn btn-secondary btn-sm" onClick={() => setIsSimulating(!isSimulating)} style={{ background: isSimulating ? 'var(--success-color)' : 'rgba(0,0,0,0.05)', color: isSimulating ? 'white' : 'var(--gray-700)' }}>
+                                        <Activity size={14} /> {isSimulating ? 'Stop Simulator' : 'Start Simulator'}
+                                    </button>
+                                    <button className="btn btn-secondary btn-sm" onClick={scanLocalNetwork} disabled={connStatus === 'scanning' || isSimulating}>
                                         <Search size={14} /> {connStatus === 'scanning' ? 'Scanning...' : 'Re-Scan Network'}
                                     </button>
                                     <button className="btn btn-ghost btn-sm" onClick={handleUnlink} style={{ color:'var(--danger-color)' }}>
@@ -487,6 +526,11 @@ export default function DeviceMonitor() {
                                             </div>
                                             <div>
                                                 <strong>2. Device Code:</strong> Ensure your Arduino code is pushing to our API. Copy the snippet from the documentation to confirm.
+                                            </div>
+                                            <div style={{ marginTop: '1rem', pt: '1rem', borderTop: '1px solid var(--gray-100)' }}>
+                                                <button onClick={() => setIsSimulating(true)} className="btn btn-primary btn-sm" style={{ width: '100%' }}>
+                                                    <Zap size={14} /> Try UI with Simulation Mode
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
