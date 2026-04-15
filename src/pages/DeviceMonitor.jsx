@@ -34,6 +34,7 @@ export default function DeviceMonitor() {
     
     const simRef = useRef(null)
     const scanRef = useRef(false)
+    const isHTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:'
 
     // ── Load Linked Device ───────────────────────────────────────────────────
     useEffect(() => {
@@ -79,6 +80,8 @@ export default function DeviceMonitor() {
     // ── Network Scanner Logic (Frontend Discovery) ───────────────────────────
     // ── Local Polling (Direct from Hardware) ────────────────────────────────
     const pollHardware = useCallback(async (ip) => {
+        if (isHTTPS) return // Browser will block this anyway
+
         try {
             const res = await fetch(`http://${ip}/`, { 
                 method: 'GET',
@@ -113,10 +116,10 @@ export default function DeviceMonitor() {
             console.warn('Poll failed:', e)
             if (e.message.includes('Failed to fetch')) {
                 setConnStatus('blocked')
-                setError('Browser blocked direct retrieval. Please "Allow Insecure Content" in Site Settings.')
+                setError('Browser blocked direct retrieval. Please run the Bridge or Allow Insecure Content.')
             }
         }
-    }, [device])
+    }, [device, isHTTPS])
 
     useEffect(() => {
         if (!foundIp || connStatus !== 'live') return
@@ -404,7 +407,7 @@ export default function DeviceMonitor() {
                                     <div>
                                         <div style={{ fontWeight:900, fontSize:'1.1rem' }}>ID: {device.device_id}</div>
                                         <div style={{ fontSize:'0.75rem', fontWeight:600, color:'var(--gray-400)', display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                                            {connStatus === 'live' ? <><CheckCircle size={12} /> Live Connection</> : <><Search size={12} className="spin" /> Discovering Signal...</>}
+                                            {connStatus === 'live' ? <><CheckCircle size={12} /> Live Sync (Cloud)</> : (isHTTPS ? <><Globe size={12} /> Waiting for Bridge...</> : <><Search size={12} className="spin" /> Discovering Signal...</>)}
                                         </div>
                                     </div>
                                 </div>
@@ -519,17 +522,19 @@ export default function DeviceMonitor() {
                                     </p>
                                     
                                     <div style={{ background:'white', padding:'1.5rem', borderRadius:16, border:'1px solid var(--gray-200)', margin:'0 auto', maxWidth:500, textAlign:'left' }}>
-                                        <h4 style={{ fontWeight:800, marginBottom:'1rem', fontSize:'0.85rem', color:'var(--gray-700)' }}>Experiencing issues?</h4>
+                                        <h4 style={{ fontWeight:800, marginBottom:'1rem', fontSize:'0.85rem', color:'var(--gray-700)' }}>Expert Retrieval Guide</h4>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', display: 'grid', gap: '1rem' }}>
-                                            <div>
-                                                <strong>1. Bowser Block:</strong> If site is HTTPS and device is HTTP, click the <strong>Lock icon</strong> in URL bar → <strong>Site Settings</strong> → <strong>Insecure Content</strong> → <strong>Allow</strong>.
+                                            <div style={{ padding: '0.75rem', background: isHTTPS ? 'rgba(56, 189, 248, 0.05)' : 'none', borderRadius: '12px', border: isHTTPS ? '1px solid var(--secondary-color)' : 'none' }}>
+                                                <strong>1. Bridge Requirement:</strong> You are on <strong>HTTPS (Vercel)</strong>. Browsers block direct hardware calls here. 
+                                                <br/><br/>
+                                                👉 <strong>Solution:</strong> Open a terminal in <code>medicrew-bridge</code> and run <code>npm start</code>. This will relay data to this page instantly.
                                             </div>
                                             <div>
-                                                <strong>2. Device Code:</strong> Ensure your Arduino code is pushing to our API. Copy the snippet from the documentation to confirm.
+                                                <strong>2. Device Health:</strong> Ensure your hardware IP is correct and reachable on your local network.
                                             </div>
                                             <div style={{ marginTop: '1rem', pt: '1rem', borderTop: '1px solid var(--gray-100)' }}>
                                                 <button onClick={() => setIsSimulating(true)} className="btn btn-primary btn-sm" style={{ width: '100%' }}>
-                                                    <Zap size={14} /> Try UI with Simulation Mode
+                                                    <Zap size={14} /> View Demo with Simulator
                                                 </button>
                                             </div>
                                         </div>
